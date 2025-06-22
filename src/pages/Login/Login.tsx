@@ -19,7 +19,7 @@ const Login: React.FC = () => {
       await login(values.email, values.password)
       message.success('Login successful!')
       // Redirect to the page they were trying to access, or profile as default
-      const from = location.state?.from?.pathname as string || '/profile'
+      const from = (location.state?.from?.pathname as string) || '/profile'
       navigate(from, { replace: true })
     } catch (error) {
       message.error(error instanceof Error ? error.message : 'Login failed')

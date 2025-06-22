@@ -49,11 +49,15 @@ const Header: React.FC = () => {
       label: 'Home'
     },
     // Only show profile menu item for authenticated users
-    ...(isAuthenticated ? [{
-      key: 'profile',
-      icon: <UserOutlined />,
-      label: 'My Profile'
-    }] : [])
+    ...(isAuthenticated
+      ? [
+          {
+            key: 'profile',
+            icon: <UserOutlined />,
+            label: 'My Profile'
+          }
+        ]
+      : [])
   ]
 
   const userMenuItems = [
@@ -184,16 +188,18 @@ const Header: React.FC = () => {
           items={[
             ...menuItems,
             // Only show project-related items for authenticated users
-            ...(isAuthenticated ? [
-              { type: 'divider' as const },
-              {
-                key: 'new-project',
-                icon: <PlusOutlined />,
-                label: 'New Project'
-              },
-              { type: 'divider' as const },
-              ...userMenuItems
-            ] : [])
+            ...(isAuthenticated
+              ? [
+                  { type: 'divider' as const },
+                  {
+                    key: 'new-project',
+                    icon: <PlusOutlined />,
+                    label: 'New Project'
+                  },
+                  { type: 'divider' as const },
+                  ...userMenuItems
+                ]
+              : [])
           ]}
           onClick={({ key }) => handleMenuClick(key)}
         />
