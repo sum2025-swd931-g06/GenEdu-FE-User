@@ -2,7 +2,7 @@
 
 html, body, #root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-    font-synthesis: none;
+  font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -14,4 +14,43 @@ html, body, #root {
 
 .reveal {
   height: 100%;
+}
+
+/* Custom responsive utilities */
+@media (max-width: 768px) {
+  .hidden-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+
+/* Ant Design customizations */
+.ant-layout {
+  background: #fff;
+}
+
+.ant-layout-header {
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* Custom gradient backgrounds */
+.gradient-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Card hover effects */
+.ant-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: box-shadow 0.3s ease;
+}
+
+/* Smooth transitions */
+.ant-btn, .ant-card, .ant-input {
+  transition: all 0.2s ease;
 }

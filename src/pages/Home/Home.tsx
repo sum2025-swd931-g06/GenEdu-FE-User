@@ -1,9 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Card, Typography, Button, Input, Space, Row, Col } from 'antd'
+import { RocketOutlined, BulbOutlined, SoundOutlined } from '@ant-design/icons'
+import { useAuth } from '../../hooks/useAuth'
+
+const { Title, Paragraph } = Typography
 
 export default function Home() {
   const [topic, setTopic] = useState('')
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuth()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -13,35 +19,101 @@ export default function Home() {
   }
 
   return (
-    <div style={{ padding: 40 }}>
-      <div style={{ marginBottom: 20, textAlign: 'right' }}>
-        <button
-          onClick={() => navigate('/profile')}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#1890ff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          My Profile & Projects
-        </button>
+    <div style={{ padding: '40px 24px', maxWidth: '1200px', margin: '0 auto' }}>
+      {/* Hero Section */}
+      <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+        <Title level={1} style={{ fontSize: '3rem', marginBottom: '24px' }}>
+          Create Amazing Presentations with AI
+        </Title>
+        <Paragraph style={{ fontSize: '1.2rem', color: '#666', maxWidth: '600px', margin: '0 auto 40px' }}>
+          Transform your ideas into stunning presentations with AI-powered slide generation and speech-to-text
+          technology.
+        </Paragraph>
+
+        <Card style={{ maxWidth: '500px', margin: '0 auto' }}>
+          <form onSubmit={handleSubmit}>
+            <Title level={4} style={{ marginBottom: '16px' }}>
+              Get Started Now
+            </Title>
+            <Space.Compact style={{ width: '100%' }}>
+              <Input
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder='Enter your topic (e.g., "AI in Education", "Climate Change")'
+                size='large'
+                style={{ flex: 1 }}
+              />
+              <Button type='primary' htmlType='submit' size='large' disabled={!topic.trim()}>
+                Generate Slides
+              </Button>
+            </Space.Compact>
+          </form>
+        </Card>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <h2>Enter topic to generate slides:</h2>
-        <input
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          placeholder='e.g. ai, code'
-          style={{ padding: 8, fontSize: 16 }}
-        />
-        <button type='submit' style={{ marginLeft: 10, padding: 8 }}>
-          Go to presentation
-        </button>
-      </form>
+      {/* Features Section */}
+      <Row gutter={[32, 32]} style={{ marginBottom: '60px' }}>
+        <Col xs={24} md={8}>
+          <Card hoverable style={{ textAlign: 'center', height: '100%' }}>
+            <BulbOutlined style={{ fontSize: '3rem', color: '#1890ff', marginBottom: '16px' }} />
+            <Title level={3}>AI-Powered Generation</Title>
+            <Paragraph>
+              Our advanced AI creates engaging slides tailored to your topic, saving you hours of work.
+            </Paragraph>
+          </Card>
+        </Col>
+        <Col xs={24} md={8}>
+          <Card hoverable style={{ textAlign: 'center', height: '100%' }}>
+            <SoundOutlined style={{ fontSize: '3rem', color: '#52c41a', marginBottom: '16px' }} />
+            <Title level={3}>Audio Narration</Title>
+            <Paragraph>
+              Convert your text to professional audio narration with multiple voice options and natural speech.
+            </Paragraph>
+          </Card>
+        </Col>
+        <Col xs={24} md={8}>
+          <Card hoverable style={{ textAlign: 'center', height: '100%' }}>
+            <RocketOutlined style={{ fontSize: '3rem', color: '#722ed1', marginBottom: '16px' }} />
+            <Title level={3}>Easy Management</Title>
+            <Paragraph>
+              Organize, edit, and share your presentations with our intuitive project management system.
+            </Paragraph>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* CTA Section */}
+      <Card
+        style={{ textAlign: 'center', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', border: 'none' }}
+      >
+        <Title level={2} style={{ color: 'white', marginBottom: '16px' }}>
+          Ready to revolutionize your presentations?
+        </Title>
+        <Paragraph style={{ color: 'white', fontSize: '1.1rem', marginBottom: '24px' }}>
+          Join thousands of educators and professionals using GenEdu.
+        </Paragraph>
+        <Space>
+          {!isAuthenticated ? (
+            <>
+              <Button size='large' style={{ marginRight: '16px' }} onClick={() => navigate('/register')}>
+                Get Started Free
+              </Button>
+              <Button size='large' type='default' ghost onClick={() => navigate('/login')}>
+                Sign In
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button size='large' style={{ marginRight: '16px' }} onClick={() => navigate('/profile')}>
+                My Projects
+              </Button>
+              <Button size='large' type='default' ghost onClick={() => navigate('/presentation')}>
+                Create Presentation
+              </Button>
+            </>
+          )}
+        </Space>
+      </Card>
     </div>
   )
 }
