@@ -37,18 +37,18 @@ const Register: React.FC = () => {
             <Text type='secondary'>Get access to AI-powered presentation tools</Text>
           </div>
 
-          <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <Space direction='vertical' style={{ width: '100%' }} size='large'>
             <div style={{ padding: '24px', backgroundColor: '#f6f6f6', borderRadius: '8px' }}>
               <ContactsOutlined style={{ fontSize: '32px', color: '#52c41a', marginBottom: '16px' }} />
               <Title level={4} style={{ marginBottom: '8px' }}>
                 Contact Administrator
               </Title>
               <Text type='secondary' style={{ display: 'block', marginBottom: '16px' }}>
-                GenEdu uses enterprise authentication through Keycloak.
-                To get access, please contact your system administrator.
+                GenEdu uses enterprise authentication through Keycloak. To get access, please contact your system
+                administrator.
               </Text>
-              
-              <Space direction="vertical" style={{ width: '100%' }}>
+
+              <Space direction='vertical' style={{ width: '100%' }}>
                 <Text strong>What you'll get:</Text>
                 <ul style={{ textAlign: 'left', margin: '8px 0' }}>
                   <li>AI-powered slide generation</li>
@@ -59,7 +59,7 @@ const Register: React.FC = () => {
               </Space>
             </div>
 
-            <Button 
+            <Button
               type='primary'
               size='large'
               block
@@ -70,8 +70,7 @@ const Register: React.FC = () => {
             </Button>
 
             <Text type='secondary' style={{ fontSize: '12px' }}>
-              Need help? Contact support at{' '}
-              <a href="mailto:support@genedu.com">support@genedu.com</a>
+              Need help? Contact support at <a href='mailto:support@genedu.com'>support@genedu.com</a>
             </Text>
           </Space>
         </Card>

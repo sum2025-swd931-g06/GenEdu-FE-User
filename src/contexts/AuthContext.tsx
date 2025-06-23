@@ -1,107 +1,102 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useKeycloak } from '@react-keycloak/web'
 import type { AuthUser, AuthContextType } from '../types/auth.type'
 import { AuthContext } from './auth-context'
-
-// Mock users for authentication
-const mockUsers: AuthUser[] = [
-  {
-    id: '1',
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
-    role: 'STUDENT'
-  },
-  {
-    id: '2',
-    name: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane',
-    role: 'TEACHER'
-  },
-  {
-    id: '3',
-    name: 'Admin User',
-    email: 'admin@example.com',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin',
-    role: 'ADMIN'
-  }
-]
 
 interface AuthProviderProps {
   children: React.ReactNode
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const { keycloak, initialized } = useKeycloak()
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Check for existing auth on mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const savedUser = localStorage.getItem('auth_user')
-        if (savedUser) {
-          const userData = JSON.parse(savedUser)
-          setUser(userData)
-        }
-      } catch (error) {
-        console.error('Error checking auth:', error)
-        localStorage.removeItem('auth_user')
-      } finally {
-        setIsLoading(false)
-      }
+  // Parse user info from Keycloak token
+  const parseUserFromKeycloak = useCallback((): AuthUser | null => {
+    if (!keycloak.authenticated || !keycloak.tokenParsed) {
+      return null
     }
 
-    // Simulate async auth check
-    setTimeout(checkAuth, 500)
-  }, [])
+    const tokenParsed = keycloak.tokenParsed as Record<string, unknown>
+    const realmAccess = (tokenParsed?.realm_access as Record<string, unknown>) || {}
+    const roles = (realmAccess.roles as string[]) || []
 
-  const login = async (email: string, password: string): Promise<void> => {
-    setIsLoading(true)
+    return {
+      id: (tokenParsed?.sub as string) || '',
+      username: (tokenParsed?.preferred_username as string) || '',
+      fullName: (tokenParsed?.name as string) || (tokenParsed?.preferred_username as string) || '',
+      email: (tokenParsed?.email as string) || '',
+      emailVerified: (tokenParsed?.email_verified as boolean) || false,
+      roles,
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${(tokenParsed?.preferred_username as string) || 'user'}`
+    }
+  }, [keycloak.authenticated, keycloak.tokenParsed])
 
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Mock login logic
-        const foundUser = mockUsers.find((u) => u.email === email)
+  // Update user when Keycloak state changes
+  useEffect(() => {
+    if (initialized) {
+      setIsLoading(false)
+      if (keycloak.authenticated) {
+        const userData = parseUserFromKeycloak()
+        setUser(userData)
+      } else {
+        setUser(null)
+      }
+    }
+  }, [initialized, keycloak.authenticated, parseUserFromKeycloak])
 
-        if (foundUser && password === 'password123') {
-          setUser(foundUser)
-          localStorage.setItem('auth_user', JSON.stringify(foundUser))
-          setIsLoading(false)
-          resolve()
-        } else {
-          setIsLoading(false)
-          reject(new Error('Invalid email or password'))
-        }
-      }, 1000) // Simulate network delay
+  // Handle token refresh
+  const updateToken = useCallback(async (): Promise<boolean> => {
+    try {
+      const refreshed = await keycloak.updateToken(70) // Refresh if token expires in 70 seconds
+      if (refreshed) {
+        console.log('Token refreshed')
+        const userData = parseUserFromKeycloak()
+        setUser(userData)
+      }
+      return refreshed
+    } catch (error) {
+      console.error('Failed to refresh token:', error)
+      return false
+    }
+  }, [keycloak, parseUserFromKeycloak])
+
+  // Login function
+  const login = useCallback(() => {
+    keycloak.login({
+      redirectUri: window.location.origin + '/profile'
     })
-  }
+  }, [keycloak])
 
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem('auth_user')
-  }
-
-  const updateProfile = async (data: Partial<AuthUser>): Promise<void> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (user) {
-          const updatedUser = { ...user, ...data }
-          setUser(updatedUser)
-          localStorage.setItem('auth_user', JSON.stringify(updatedUser))
-        }
-        resolve()
-      }, 500)
+  // Logout function
+  const logout = useCallback(() => {
+    keycloak.logout({
+      redirectUri: window.location.origin
     })
-  }
+  }, [keycloak])
+
+  // Auto-refresh token
+  useEffect(() => {
+    if (keycloak.authenticated) {
+      const interval = setInterval(() => {
+        updateToken()
+      }, 60000) // Check every minute
+
+      return () => clearInterval(interval)
+    }
+  }, [keycloak.authenticated, updateToken])
 
   const value: AuthContextType = {
     user,
-    isAuthenticated: !!user,
-    isLoading,
+    isAuthenticated: keycloak.authenticated || false,
+    isLoading: isLoading || !initialized,
+    token: keycloak.token || null,
+    refreshToken: keycloak.refreshToken || null,
+    keycloak,
     login,
     logout,
-    updateProfile
+    updateToken
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

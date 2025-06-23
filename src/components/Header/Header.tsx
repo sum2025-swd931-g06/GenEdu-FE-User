@@ -151,7 +151,7 @@ const Header: React.FC = () => {
               <Space style={{ cursor: 'pointer' }}>
                 <Avatar src={user?.avatar} icon={<UserOutlined />} size='default' />
                 <Text strong className='hidden-mobile'>
-                  {user?.name}
+                  {user?.fullName}
                 </Text>
               </Space>
             </Dropdown>
@@ -166,10 +166,12 @@ const Header: React.FC = () => {
           </>
         ) : (
           <Space>
-            <Button onClick={() => navigate('/login')}>Login</Button>
-            <Button type='primary' onClick={() => navigate('/register')}>
-              Register
+            <Button type='primary' onClick={() => navigate('/login')}>
+              Login
             </Button>
+            {/* <Button type='primary' onClick={() => navigate('/register')}>
+              Register
+            </Button> */}
           </Space>
         )}
       </div>

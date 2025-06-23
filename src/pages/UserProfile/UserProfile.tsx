@@ -2,7 +2,8 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, Button, Tag, Row, Col, Typography, Avatar, Space, Divider, Progress } from 'antd'
 import { UserOutlined, ProjectOutlined, EyeOutlined, CalendarOutlined, SoundOutlined } from '@ant-design/icons'
-import { mockUser, mockProjects } from '../../mocks/projectData'
+import { mockProjects } from '../../mocks/projectData'
+import { useAuth } from '../../hooks/useAuth'
 import type { Project } from '../../types/auth.type'
 import { ProjectStatus, AudioProjectStatus } from '../../types/auth.type'
 
@@ -11,6 +12,7 @@ const { Meta } = Card
 
 const UserProfile: React.FC = () => {
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const getStatusColor = (status: ProjectStatus) => {
     switch (status) {
@@ -79,11 +81,11 @@ const UserProfile: React.FC = () => {
           </Col>
           <Col flex='auto'>
             <Title level={2} style={{ margin: 0 }}>
-              {mockUser.name}
+              {user?.fullName || 'User'}
             </Title>
-            <Text type='secondary'>{mockUser.email}</Text>
+            <Text type='secondary'>{user?.email || 'N/A'}</Text>
             <br />
-            <Text type='secondary'>ID: {mockUser.idNumber}</Text>
+            <Text type='secondary'>ID: {user?.username || 'N/A'}</Text>
           </Col>
           <Col>
             <Space direction='vertical' align='center'>

@@ -1,3 +1,5 @@
+import type Keycloak from 'keycloak-js'
+
 // Project types
 export interface Project {
   id: string
@@ -41,32 +43,39 @@ export interface ProjectDetail extends Project {
   slides: Slide[]
 }
 
-// Auth types
+// Keycloak Auth types
+export interface KeycloakAuthenticatedData {
+  isAuthenticated: boolean
+  token: string
+  refreshToken: string
+  userInfo: {
+    id: string
+    username: string
+    fullName: string
+    email: string
+    emailVerified: boolean
+    roles: string[]
+  }
+}
+
 export interface AuthUser {
   id: string
-  name: string
+  username: string
+  fullName: string
   email: string
+  emailVerified: boolean
+  roles: string[]
   avatar?: string
-  role: 'STUDENT' | 'TEACHER' | 'ADMIN'
 }
 
 export interface AuthContextType {
   user: AuthUser | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (email: string, password: string) => Promise<void>
+  token: string | null
+  refreshToken: string | null
+  keycloak: Keycloak // Keycloak instance
+  login: () => void
   logout: () => void
-  updateProfile: (data: Partial<AuthUser>) => Promise<void>
-}
-
-export interface LoginRequest {
-  email: string
-  password: string
-}
-
-export interface RegisterRequest {
-  name: string
-  email: string
-  password: string
-  confirmPassword: string
+  updateToken: () => Promise<boolean>
 }
