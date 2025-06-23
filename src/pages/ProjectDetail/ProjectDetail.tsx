@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Button, Typography, Row, Col, Space, Tag, Divider, Progress, message, Slider } from 'antd'
+import { Card, Button, Typography, Row, Col, Space, Tag, Divider, Progress, message, Slider, Spin } from 'antd'
 import {
   ArrowLeftOutlined,
   PlayCircleOutlined,
@@ -13,7 +13,7 @@ import {
   CalendarOutlined,
   ProjectOutlined
 } from '@ant-design/icons'
-import { mockProjectDetails } from '../../mocks/projectData'
+import { useProject } from '../../hooks/useProjects'
 import type { ProjectDetail } from '../../types/auth.type'
 import { ProjectStatus, AudioProjectStatus } from '../../types/auth.type'
 
@@ -24,7 +24,9 @@ const ProjectDetailPage: React.FC = () => {
   const navigate = useNavigate()
   const audioRef = useRef<HTMLAudioElement>(null)
 
-  const [project, setProject] = useState<ProjectDetail | null>(null)
+  // Use the dedicated useProject hook for loading project details
+  const { projectDetail: project, loading: projectLoading, error: projectError } = useProject(id)
+
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [audioCurrentTime, setAudioCurrentTime] = useState(0)
@@ -32,13 +34,11 @@ const ProjectDetailPage: React.FC = () => {
   const [volume, setVolume] = useState(1)
 
   useEffect(() => {
-    if (id && mockProjectDetails[id]) {
-      setProject(mockProjectDetails[id])
-    } else {
+    if (projectError) {
       message.error('Project not found')
       navigate('/profile')
     }
-  }, [id, navigate])
+  }, [projectError, navigate])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -138,8 +138,23 @@ const ProjectDetailPage: React.FC = () => {
     }
   }
 
+  if (projectLoading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Spin size='large' />
+        <div style={{ marginTop: '16px' }}>
+          <Text>Loading project details...</Text>
+        </div>
+      </div>
+    )
+  }
+
   if (!project) {
-    return <div>Loading...</div>
+    return (
+      <div style={{ textAlign: 'center', padding: '50px' }}>
+        <Text type='secondary'>Project not found</Text>
+      </div>
+    )
   }
 
   const currentSlide = project.slides[currentSlideIndex]

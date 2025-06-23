@@ -1,9 +1,9 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, Button, Tag, Row, Col, Typography, Avatar, Space, Divider, Progress } from 'antd'
+import { Card, Button, Tag, Row, Col, Typography, Avatar, Space, Divider, Progress, Spin, Empty } from 'antd'
 import { UserOutlined, ProjectOutlined, EyeOutlined, CalendarOutlined, SoundOutlined } from '@ant-design/icons'
-import { mockProjects } from '../../mocks/projectData'
 import { useAuth } from '../../hooks/useAuth'
+import { useProjects } from '../../hooks/useProjects'
 import type { Project } from '../../types/auth.type'
 import { ProjectStatus, AudioProjectStatus } from '../../types/auth.type'
 
@@ -13,6 +13,22 @@ const { Meta } = Card
 const UserProfile: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { projects, loading, error, getProjectStats } = useProjects()
+
+  const [stats, setStats] = useState({
+    totalProjects: 0,
+    completedProjects: 0,
+    totalSlides: 0,
+    totalAudioMinutes: 0
+  })
+
+  useEffect(() => {
+    const loadStats = async () => {
+      const projectStats = await getProjectStats()
+      setStats(projectStats)
+    }
+    loadStats()
+  }, [projects, getProjectStats])
 
   const getStatusColor = (status: ProjectStatus) => {
     switch (status) {
@@ -73,6 +89,12 @@ const UserProfile: React.FC = () => {
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+      {error && (
+        <Card style={{ marginBottom: '24px', borderColor: '#ff4d4f' }}>
+          <Text type='danger'>Error loading projects: {error}</Text>
+        </Card>
+      )}
+
       {/* User Profile Header */}
       <Card style={{ marginBottom: '24px' }}>
         <Row gutter={[24, 24]} align='middle'>
@@ -89,13 +111,13 @@ const UserProfile: React.FC = () => {
           </Col>
           <Col>
             <Space direction='vertical' align='center'>
-              <Text strong>{mockProjects.length}</Text>
+              <Text strong>{stats.totalProjects}</Text>
               <Text type='secondary'>Total Projects</Text>
             </Space>
           </Col>
           <Col>
             <Space direction='vertical' align='center'>
-              <Text strong>{mockProjects.filter((p) => p.status === 'COMPLETED').length}</Text>
+              <Text strong>{stats.completedProjects}</Text>
               <Text type='secondary'>Completed</Text>
             </Space>
           </Col>
@@ -107,62 +129,74 @@ const UserProfile: React.FC = () => {
         <ProjectOutlined /> My Projects
       </Title>
 
-      <Row gutter={[16, 16]}>
-        {mockProjects.map((project) => (
-          <Col xs={24} sm={12} lg={8} key={project.id}>
-            <Card
-              hoverable
-              actions={[
-                <Button type='link' icon={<EyeOutlined />} onClick={() => handleViewProject(project.id)}>
-                  View Details
-                </Button>
-              ]}
-              style={{ height: '100%' }}
-            >
-              <Meta
-                title={
-                  <Space direction='vertical' size='small' style={{ width: '100%' }}>
-                    <Text strong>{project.title}</Text>
-                    <Tag color={getStatusColor(project.status)}>{project.status.replace('_', ' ')}</Tag>
-                  </Space>
-                }
-                description={
-                  <Space direction='vertical' size='small' style={{ width: '100%' }}>
-                    <div>
-                      <CalendarOutlined /> {formatDate(project.creationTime)}
-                    </div>
-                    <div>
-                      <ProjectOutlined /> {project.slideNum || 0} slides
-                    </div>
-                    {project.audioProject && (
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <Spin size='large' />
+        </div>
+      ) : projects.length === 0 ? (
+        <Card>
+          <Empty description='No projects found' image={Empty.PRESENTED_IMAGE_SIMPLE}>
+            <Button type='primary'>Create Your First Project</Button>
+          </Empty>
+        </Card>
+      ) : (
+        <Row gutter={[16, 16]}>
+          {projects.map((project) => (
+            <Col xs={24} sm={12} lg={8} key={project.id}>
+              <Card
+                hoverable
+                actions={[
+                  <Button type='link' icon={<EyeOutlined />} onClick={() => handleViewProject(project.id)}>
+                    View Details
+                  </Button>
+                ]}
+                style={{ height: '100%' }}
+              >
+                <Meta
+                  title={
+                    <Space direction='vertical' size='small' style={{ width: '100%' }}>
+                      <Text strong>{project.title}</Text>
+                      <Tag color={getStatusColor(project.status)}>{project.status.replace('_', ' ')}</Tag>
+                    </Space>
+                  }
+                  description={
+                    <Space direction='vertical' size='small' style={{ width: '100%' }}>
                       <div>
-                        <SoundOutlined /> Audio:{' '}
-                        <Tag color={getAudioStatusColor(project.audioProject.status)}>
-                          {project.audioProject.status}
-                        </Tag>
-                        {project.audioProject.durationSeconds && (
-                          <Text type='secondary'>({formatDuration(project.audioProject.durationSeconds)})</Text>
-                        )}
+                        <CalendarOutlined /> {formatDate(project.creationTime)}
                       </div>
-                    )}
-                    <Divider style={{ margin: '8px 0' }} />
-                    <div>
-                      <Text type='secondary' style={{ fontSize: '12px' }}>
-                        Progress:
-                      </Text>
-                      <Progress
-                        percent={getProjectProgress(project)}
-                        size='small'
-                        strokeColor={getStatusColor(project.status)}
-                      />
-                    </div>
-                  </Space>
-                }
-              />
-            </Card>
-          </Col>
-        ))}
-      </Row>
+                      <div>
+                        <ProjectOutlined /> {project.slideNum || 0} slides
+                      </div>
+                      {project.audioProject && (
+                        <div>
+                          <SoundOutlined /> Audio:{' '}
+                          <Tag color={getAudioStatusColor(project.audioProject.status)}>
+                            {project.audioProject.status}
+                          </Tag>
+                          {project.audioProject.durationSeconds && (
+                            <Text type='secondary'>({formatDuration(project.audioProject.durationSeconds)})</Text>
+                          )}
+                        </div>
+                      )}
+                      <Divider style={{ margin: '8px 0' }} />
+                      <div>
+                        <Text type='secondary' style={{ fontSize: '12px' }}>
+                          Progress:
+                        </Text>
+                        <Progress
+                          percent={getProjectProgress(project)}
+                          size='small'
+                          strokeColor={getStatusColor(project.status)}
+                        />
+                      </div>
+                    </Space>
+                  }
+                />
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
 
       {/* Quick Actions */}
       <Card title='Quick Actions' style={{ marginTop: '24px' }}>
