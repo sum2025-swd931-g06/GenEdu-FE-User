@@ -1,21 +1,39 @@
+import {
+  AppstoreOutlined,
+  BgColorsOutlined,
+  BulbOutlined,
+  EyeOutlined,
+  RocketOutlined,
+  SoundOutlined
+} from '@ant-design/icons'
+import { Button, Card, Col, Input, Row, Space, Tabs, Typography } from 'antd'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, Typography, Button, Input, Space, Row, Col } from 'antd'
-import { RocketOutlined, BulbOutlined, SoundOutlined } from '@ant-design/icons'
+import CombinedPreview from '../../components/CombinedPreview'
+import LayoutPicker from '../../components/LayoutPicker'
+import ThemeGallery from '../../components/ThemeGallery'
 import { useAuth } from '../../hooks/useAuth'
+import { useTheme } from '../../hooks/useTheme'
+import { getLayoutsByCategory } from '../../layouts/predefinedLayouts'
 
 const { Title, Paragraph } = Typography
 
 export default function Home() {
   const [topic, setTopic] = useState('')
+  const [showCombinedPreview, setShowCombinedPreview] = useState(false)
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
+  const { availableThemes } = useTheme()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (topic.trim()) {
       navigate(`/presentation?topic=${encodeURIComponent(topic.trim())}`)
     }
+  }
+
+  const handleShowPreview = () => {
+    setShowCombinedPreview(true)
   }
 
   return (
@@ -81,6 +99,80 @@ export default function Home() {
           </Card>
         </Col>
       </Row>
+
+      {/* Themes and Layouts Demo Section */}
+      <div style={{ marginBottom: '60px' }}>
+        <Title level={2} style={{ textAlign: 'center', marginBottom: '40px' }}>
+          Customize Your Presentations
+        </Title>
+        <Paragraph
+          style={{
+            textAlign: 'center',
+            fontSize: '1.1rem',
+            marginBottom: '40px',
+            maxWidth: '800px',
+            margin: '0 auto 40px'
+          }}
+        >
+          Choose from beautiful themes and professional layouts to make your presentations stand out.
+        </Paragraph>
+
+        <Tabs
+          defaultActiveKey='themes'
+          centered
+          items={[
+            {
+              key: 'themes',
+              label: (
+                <span>
+                  <BgColorsOutlined />
+                  Themes
+                </span>
+              ),
+              children: <ThemeGallery />
+            },
+            {
+              key: 'layouts',
+              label: (
+                <span>
+                  <AppstoreOutlined />
+                  Layouts
+                </span>
+              ),
+              children: <LayoutPicker />
+            }
+          ]}
+        />
+      </div>
+
+      {/* Live Preview Demo Section */}
+      <div style={{ marginBottom: '60px' }}>
+        <Card style={{ textAlign: 'center', padding: '40px 20px' }}>
+          <Title level={2} style={{ marginBottom: '16px' }}>
+            See Themes and Layouts in Action
+          </Title>
+          <Paragraph style={{ fontSize: '1.1rem', marginBottom: '32px', maxWidth: '600px', margin: '0 auto 32px' }}>
+            Experience how our themes and layouts work together to create stunning presentations.
+          </Paragraph>
+          <Button
+            type='primary'
+            size='large'
+            icon={<EyeOutlined />}
+            onClick={handleShowPreview}
+            style={{ marginBottom: '16px' }}
+          >
+            Live Preview Demo
+          </Button>
+        </Card>
+      </div>
+
+      {/* Combined Preview Modal */}
+      <CombinedPreview
+        theme={availableThemes[0]} // Show first theme as demo
+        layout={getLayoutsByCategory('content')[0]} // Show first content layout as demo
+        visible={showCombinedPreview}
+        onClose={() => setShowCombinedPreview(false)}
+      />
 
       {/* CTA Section */}
       <Card

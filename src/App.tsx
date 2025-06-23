@@ -1,7 +1,8 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import type { AuthClientError } from '@react-keycloak/core'
-import { AuthProvider } from './contexts/AuthContext'
+import ThemeProvider from './contexts/ThemeContext'
 import KeycloakProviderWithInit from './core/keycloak/KeycloakProviderWithInit'
+import { AuthProvider } from './contexts/AuthContext'
 import keycloak from './core/keycloak'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -28,52 +29,63 @@ function App() {
   }
 
   return (
-    <KeycloakProviderWithInit onEvent={handleOnEvent}>
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route
-              path='/'
-              element={
-                <Layout>
-                  <Home />
-                </Layout>
-              }
-            />
-            <Route
-              path='/presentation'
-              element={
-                <Layout>
-                  <Presentation />
-                </Layout>
-              }
-            />
-            <Route
-              path='/profile'
-              element={
-                <Layout>
-                  <ProtectedRoute>
-                    <UserProfile />
-                  </ProtectedRoute>
-                </Layout>
-              }
-            />
-            <Route
-              path='/project/:id'
-              element={
-                <Layout>
-                  <ProtectedRoute>
-                    <ProjectDetail />
-                  </ProtectedRoute>
-                </Layout>
-              }
-            />
-            <Route path='/login' element={<Login />} />
-            <Route path='/register' element={<Register />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </KeycloakProviderWithInit>
+    <ThemeProvider>
+      <KeycloakProviderWithInit onEvent={handleOnEvent}>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </KeycloakProviderWithInit>
+    </ThemeProvider>
+  )
+}
+
+// Separate component for routes
+const AppRoutes: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path='/'
+          element={
+            <Layout>
+              <Home />
+            </Layout>
+          }
+        />
+        <Route
+          path='/presentation'
+          element={
+            <Layout>
+              <Presentation />
+            </Layout>
+          }
+        />
+        <Route
+          path='/profile'
+          element={
+            <Layout>
+              <ProtectedRoute>
+                <UserProfile />
+              </ProtectedRoute>
+            </Layout>
+          }
+        />
+        <Route
+          path='/project/:id'
+          element={
+            <Layout>
+              <ProtectedRoute>
+                <ProjectDetail />
+              </ProtectedRoute>
+            </Layout>
+          }
+        />
+
+        {/* Keycloak auth routes */}
+        <Route path='/login' element={<Login />} />
+        <Route path='/register' element={<Register />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
