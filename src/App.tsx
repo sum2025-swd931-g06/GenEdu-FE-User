@@ -10,6 +10,7 @@ import Home from './pages/Home'
 import Presentation from './pages/Presentation/Presentation'
 import UserProfile from './pages/UserProfile'
 import ProjectDetail from './pages/ProjectDetail'
+import VideoPlayer from './pages/VideoPlayer'
 import Login from './pages/Login'
 import Register from './pages/Register'
 
@@ -84,6 +85,18 @@ const AppRoutes: React.FC = () => {
         {/* Keycloak auth routes */}
         <Route path='/login' element={<Login />} />
         <Route path='/register' element={<Register />} />
+
+        {/* Video player route */}
+        <Route
+          path='/video/:projectId'
+          element={
+            <Layout>
+              <ProtectedRoute>
+                <VideoPlayer />
+              </ProtectedRoute>
+            </Layout>
+          }
+        />
       </Routes>
     </BrowserRouter>
   )

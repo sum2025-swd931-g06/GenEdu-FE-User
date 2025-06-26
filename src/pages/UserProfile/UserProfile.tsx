@@ -1,7 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, Button, Tag, Row, Col, Typography, Avatar, Space, Divider, Progress, Spin, Empty } from 'antd'
-import { UserOutlined, ProjectOutlined, EyeOutlined, CalendarOutlined, SoundOutlined } from '@ant-design/icons'
+import {
+  UserOutlined,
+  ProjectOutlined,
+  EyeOutlined,
+  CalendarOutlined,
+  SoundOutlined,
+  PlayCircleOutlined
+} from '@ant-design/icons'
 import { useAuth } from '../../hooks/useAuth'
 import { useProjects } from '../../hooks/useProjects'
 import type { Project } from '../../types/auth.type'
@@ -87,6 +94,11 @@ const UserProfile: React.FC = () => {
     navigate(`/project/${projectId}`)
   }
 
+  const handleWatchVideo = (projectId: string) => {
+    console.log('handleWatchVideo called with projectId:', projectId)
+    navigate(`/video/${projectId}`)
+  }
+
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       {error && (
@@ -148,7 +160,14 @@ const UserProfile: React.FC = () => {
                 actions={[
                   <Button type='link' icon={<EyeOutlined />} onClick={() => handleViewProject(project.id)}>
                     View Details
-                  </Button>
+                  </Button>,
+                  ...(project.status === 'COMPLETED'
+                    ? [
+                        <Button type='link' icon={<PlayCircleOutlined />} onClick={() => handleWatchVideo(project.id)}>
+                          Watch Video
+                        </Button>
+                      ]
+                    : [])
                 ]}
                 style={{ height: '100%' }}
               >
