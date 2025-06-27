@@ -1,3 +1,56 @@
+import type { SlideLayout } from './layout.type'
+import type { Theme } from './theme.type'
+
+// Enhanced slide data structures for layout/theme integration
+export interface SlideContent {
+  id: string
+  type: 'text' | 'image' | 'chart' | 'list' | 'video' | 'code' | 'quote' | 'title' | 'subtitle'
+  content: string
+  formatting?: {
+    fontSize?: string
+    fontWeight?: string
+    color?: string
+    textAlign?: 'left' | 'center' | 'right' | 'justify'
+  }
+  position?: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }
+}
+
+export interface SlideGenerationParams {
+  topic: string
+  slideCount: number
+  projectId?: string
+  complexity?: string
+  includeImages?: boolean
+}
+
+export interface GeneratedSlide {
+  slideId: string
+  slideType: string
+  title?: string
+  content: SlideContent[]
+  layout: SlideLayout
+  theme?: Theme
+  words: string[]
+  metadata?: {
+    generatedAt: string
+    generationParams?: SlideGenerationParams
+    isComplete: boolean
+  }
+}
+
+export interface SlideGenerationResult {
+  slides: GeneratedSlide[]
+  totalSlides: number
+  generationParams: SlideGenerationParams
+  completedAt?: string
+}
+
+// Original streaming interfaces
 export interface StreamingSlideRequest {
   topic: string
   slideCount: number
@@ -55,14 +108,11 @@ export class StreamingApiService {
 
         for (const chunk of chunks) {
           const lines = chunk.split('\n')
-          let id = null
           let eventType = null
           let data = ''
 
           for (const line of lines) {
-            if (line.startsWith('id:')) {
-              id = line.slice(3).trim()
-            } else if (line.startsWith('event:')) {
+            if (line.startsWith('event:')) {
               eventType = line.slice(6).trim()
             } else if (line.startsWith('data:')) {
               data += line.slice(5).trim()
@@ -82,8 +132,8 @@ export class StreamingApiService {
           }
         }
       }
-    } catch (error: any) {
-      onError(error)
+    } catch (error: unknown) {
+      onError(error instanceof Error ? error : new Error('Unknown error occurred'))
     }
   }
 }

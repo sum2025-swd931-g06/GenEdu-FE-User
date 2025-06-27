@@ -1,6 +1,6 @@
 import { BookOutlined, NumberOutlined, PlusOutlined } from '@ant-design/icons'
 import { Card, Form, Input, Select, InputNumber, Button, Space, Typography, Divider, Tag, Row, Col, Switch } from 'antd'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
@@ -34,6 +34,7 @@ interface SlideGeneratorFormProps {
   onGenerate: (params: SlideGenerationParams) => void
   loading?: boolean
   disabled?: boolean
+  initialTopic?: string
 }
 
 const SLIDE_TYPES = [
@@ -56,10 +57,22 @@ const LANGUAGES = [
   { value: 'zh', label: 'Chinese' }
 ]
 
-const SlideGeneratorForm: React.FC<SlideGeneratorFormProps> = ({ onGenerate, loading = false, disabled = false }) => {
+const SlideGeneratorForm: React.FC<SlideGeneratorFormProps> = ({
+  onGenerate,
+  loading = false,
+  disabled = false,
+  initialTopic = ''
+}) => {
   const [form] = Form.useForm()
   const [keywords, setKeywords] = useState<string[]>([])
   const [keywordInput, setKeywordInput] = useState('')
+
+  // Set initial topic when component mounts or initialTopic changes
+  useEffect(() => {
+    if (initialTopic) {
+      form.setFieldsValue({ topic: initialTopic })
+    }
+  }, [initialTopic, form])
 
   const handleAddKeyword = () => {
     if (keywordInput.trim() && !keywords.includes(keywordInput.trim())) {

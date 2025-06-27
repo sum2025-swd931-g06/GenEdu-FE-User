@@ -16,6 +16,7 @@ import ThemeGallery from '../../components/ThemeGallery'
 import { useAuth } from '../../hooks/useAuth'
 import { useTheme } from '../../hooks/useTheme'
 import { getLayoutsByCategory } from '../../layouts/predefinedLayouts'
+import path from '../../constants/path'
 
 const { Title, Paragraph } = Typography
 
@@ -29,7 +30,7 @@ export default function Home() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (topic.trim()) {
-      navigate(`/presentation?topic=${encodeURIComponent(topic.trim())}`)
+      navigate(`${path.slideGeneratorDemo}?topic=${encodeURIComponent(topic.trim())}`)
     }
   }
 
@@ -58,12 +59,12 @@ export default function Home() {
             title='AI Slide Generator'
             description='Generate professional presentations with AI streaming technology'
           />
-          <Button type='primary' style={{ marginTop: 16 }} onClick={() => navigate('/generate-slides')}>
+          <Button type='primary' style={{ marginTop: 16 }} onClick={() => navigate(path.slideGeneratorDemo)}>
             Try Now
           </Button>
         </Card>
 
-        <Card style={{ maxWidth: '500px', margin: '0 auto' }}>
+        <Card style={{ margin: '0 auto', marginTop: '40px' }}>
           <form onSubmit={handleSubmit}>
             <Title level={4} style={{ marginBottom: '16px' }}>
               Get Started Now

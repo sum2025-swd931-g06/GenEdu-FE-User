@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Project, ProjectDetail, AudioProject, UserData } from '../types/auth.type'
+import { useState, useEffect, useCallback } from 'react'
+import { Project, ProjectDetail, AudioProject } from '../types/auth.type'
 import { projectService } from '../services/project.service'
 import { useAuth } from './useAuth'
 
@@ -13,15 +13,7 @@ export const useProjects = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Load user projects when user changes
-  useEffect(() => {
-    if (user?.email) {
-      loadUserProjects()
-      loadUserAudioProjects()
-    }
-  }, [user])
-
-  const loadUserProjects = async () => {
+  const loadUserProjects = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -35,16 +27,24 @@ export const useProjects = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
 
-  const loadUserAudioProjects = async () => {
+  const loadUserAudioProjects = useCallback(async () => {
     try {
       const userAudioProjects = await projectService.getUserAudioProjects()
       setAudioProjects(userAudioProjects)
     } catch (err) {
       console.error('Failed to load audio projects:', err)
     }
-  }
+  }, [])
+
+  // Load user projects when user changes
+  useEffect(() => {
+    if (user?.email) {
+      loadUserProjects()
+      loadUserAudioProjects()
+    }
+  }, [user, loadUserProjects, loadUserAudioProjects])
 
   const createProject = async (title: string, topic: string): Promise<Project | null> => {
     try {
@@ -180,7 +180,7 @@ export const useProjects = () => {
     }
   }
 
-  const getProjectStats = async () => {
+  const getProjectStats = useCallback(async () => {
     try {
       return await projectService.getProjectStats()
     } catch (err) {
@@ -192,7 +192,7 @@ export const useProjects = () => {
         totalAudioMinutes: 0
       }
     }
-  }
+  }, [])
 
   const refreshProjects = () => {
     loadUserProjects()

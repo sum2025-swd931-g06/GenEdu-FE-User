@@ -12,8 +12,11 @@ import Presentation from './pages/Presentation/Presentation'
 import ProjectDetail from './pages/ProjectDetail'
 import Register from './pages/Register'
 import SlideGeneratorDemo from './pages/SlideGenerator/SlideGeneratorDemo'
+import SlideLayoutDemo from './components/SlideGenerator/SlideLayoutDemo'
 import UserProfile from './pages/UserProfile'
 import VideoPlayer from './pages/VideoPlayer'
+import path from './constants/path'
+import SavedSlidesManager from './components/SavedSlides/SavedSlidesManager'
 
 function App() {
   const handleOnEvent = async (event: string, error: AuthClientError | undefined) => {
@@ -85,11 +88,34 @@ const AppRoutes: React.FC = () => {
 
         {/* Enhanced AI Slide Generator Demo Route */}
         <Route
-          path='/slide-generator-demo'
+          path={path.slideGeneratorDemo}
           element={
             <Layout>
               <ProtectedRoute>
                 <SlideGeneratorDemo />
+              </ProtectedRoute>
+            </Layout>
+          }
+        />
+
+        {/* Slide Layout Assignment Demo Route */}
+        <Route
+          path='/slide-layout-demo'
+          element={
+            <Layout>
+              <ProtectedRoute>
+                <SlideLayoutDemo />
+              </ProtectedRoute>
+            </Layout>
+          }
+        />
+
+        <Route
+          path='/saved-slides'
+          element={
+            <Layout>
+              <ProtectedRoute>
+                <SavedSlidesManager />
               </ProtectedRoute>
             </Layout>
           }

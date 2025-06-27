@@ -9,9 +9,11 @@ import {
   SettingOutlined,
   MenuOutlined,
   PlusOutlined,
-  ExperimentOutlined
+  ExperimentOutlined,
+  BookOutlined
 } from '@ant-design/icons'
 import { useAuth } from '../../hooks/useAuth'
+import path from '../../constants/path'
 
 const { Header: AntHeader } = Layout
 const { Text } = Typography
@@ -30,12 +32,15 @@ const Header: React.FC = () => {
       case 'profile':
         navigate('/profile')
         break
+      case 'saved-slides':
+        navigate(path.savedSlides)
+        break
       case 'logout':
         logout()
         navigate('/')
         break
       case 'slide-generator-demo':
-        navigate('/slide-generator-demo')
+        navigate(path.slideGeneratorDemo)
         break
       case 'settings':
         // Navigate to settings page when implemented
@@ -57,9 +62,14 @@ const Header: React.FC = () => {
       icon: <ExperimentOutlined />,
       label: 'AI Slide Generator'
     },
-    // Only show profile menu item for authenticated users
+    // Only show profile and saved slides menu items for authenticated users
     ...(isAuthenticated
       ? [
+          {
+            key: 'saved-slides',
+            icon: <BookOutlined />,
+            label: 'Saved Slides'
+          },
           {
             key: 'profile',
             icon: <UserOutlined />,
@@ -93,13 +103,15 @@ const Header: React.FC = () => {
 
   const currentPath = location.pathname
   const selectedKeys =
-    currentPath === '/'
+    currentPath === path.home
       ? ['home']
-      : currentPath === '/profile'
+      : currentPath === path.profile
         ? ['profile']
-        : currentPath === '/slide-generator-demo'
-          ? ['slide-generator-demo']
-          : []
+        : currentPath === path.savedSlides
+          ? ['saved-slides']
+          : currentPath === path.slideGeneratorDemo
+            ? ['slide-generator-demo']
+            : []
 
   return (
     <AntHeader
@@ -165,7 +177,11 @@ const Header: React.FC = () => {
               arrow
             >
               <Space style={{ cursor: 'pointer' }}>
-                <Avatar src={user?.avatar} icon={<UserOutlined />} size='default' />
+                <Avatar
+                  src={`https://api.dicebear.com/7.x/miniavs/svg?seed=${user?.avatar}`}
+                  icon={<UserOutlined />}
+                  size='default'
+                />
                 <Text strong className='hidden-mobile'>
                   {user?.fullName}
                 </Text>

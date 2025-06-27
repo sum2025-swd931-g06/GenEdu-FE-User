@@ -4,6 +4,13 @@ const path = {
   register: '/register',
   logout: '/logout',
   profile: '/profile',
-  projectDetail: '/project/:id'
+  projectDetail: '/project/:id',
+  slideGeneratorDemo: '/slide-generator-demo',
+  savedSlides: '/saved-slides',
+  videoPlayer: '/video/:projectId',
+  presentation: '/presentation',
+  settings: '/settings',
+  notFound: '/404',
+  internalServerError: '/500'
 } as const
 export default path
