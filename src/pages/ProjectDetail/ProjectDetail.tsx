@@ -11,11 +11,13 @@ import {
   SoundOutlined,
   InfoCircleOutlined,
   CalendarOutlined,
-  ProjectOutlined
+  ProjectOutlined,
+  BookOutlined
 } from '@ant-design/icons'
 import { useProject } from '../../hooks/useProjects'
 import type { ProjectDetail } from '../../types/auth.type'
 import { ProjectStatus, AudioProjectStatus } from '../../types/auth.type'
+import { DraftProjectService } from '../../services/savedSlidesService'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -27,18 +29,40 @@ const ProjectDetailPage: React.FC = () => {
   // Use the dedicated useProject hook for loading project details
   const { projectDetail: project, loading: projectLoading, error: projectError } = useProject(id)
 
+  // State for handling draft projects (projects without audio)
+  const [draftProject, setDraftProject] = useState<ProjectDetail | null>(null)
+  const [isDraftProject, setIsDraftProject] = useState(false)
+  const [loading, setLoading] = useState(true)
+
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [audioCurrentTime, setAudioCurrentTime] = useState(0)
   const [audioDuration, setAudioDuration] = useState(0)
   const [volume, setVolume] = useState(1)
 
+  // Check if this is a draft project or regular project
   useEffect(() => {
-    if (projectError) {
+    if (id) {
+      // Try to load as draft project first
+      const draft = DraftProjectService.getDraftProjectById(id)
+      if (draft) {
+        setDraftProject(draft)
+        setIsDraftProject(true)
+        setLoading(false)
+      } else {
+        // If not found as draft project, let useProject handle it
+        setIsDraftProject(false)
+        setLoading(projectLoading)
+      }
+    }
+  }, [id, projectLoading])
+
+  useEffect(() => {
+    if (projectError && !isDraftProject) {
       message.error('Project not found')
       navigate('/profile')
     }
-  }, [projectError, navigate])
+  }, [projectError, navigate, isDraftProject])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -120,7 +144,7 @@ const ProjectDetailPage: React.FC = () => {
   }
 
   const nextSlide = () => {
-    if (project && currentSlideIndex < project.slides.length - 1) {
+    if (projectData && currentSlideIndex < projectData.slides.length - 1) {
       setCurrentSlideIndex(currentSlideIndex + 1)
     }
   }
@@ -138,7 +162,7 @@ const ProjectDetailPage: React.FC = () => {
     }
   }
 
-  if (projectLoading) {
+  if (loading || (projectLoading && !isDraftProject)) {
     return (
       <div style={{ textAlign: 'center', padding: '50px' }}>
         <Spin size='large' />
@@ -149,7 +173,7 @@ const ProjectDetailPage: React.FC = () => {
     )
   }
 
-  if (!project) {
+  if (!project && !draftProject) {
     return (
       <div style={{ textAlign: 'center', padding: '50px' }}>
         <Text type='secondary'>Project not found</Text>
@@ -157,7 +181,11 @@ const ProjectDetailPage: React.FC = () => {
     )
   }
 
-  const currentSlide = project.slides[currentSlideIndex]
+  // Determine what data to use - we now have only one Project type
+  const projectData = isDraftProject ? draftProject : project
+  const slides = projectData?.slides || []
+
+  const currentSlide = slides[currentSlideIndex]
 
   return (
     <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
@@ -169,18 +197,20 @@ const ProjectDetailPage: React.FC = () => {
               Back to Profile
             </Button>
             <Title level={2} style={{ margin: 0 }}>
-              {project.title}
+              {projectData?.title}
             </Title>
-            <Tag color={getStatusColor(project.status)}>{project.status.replace('_', ' ')}</Tag>
+            <Tag color={getStatusColor(projectData?.status || 'DRAFT')}>
+              {projectData?.status?.replace('_', ' ') || 'DRAFT'}
+            </Tag>
           </Space>
         </Col>
         <Col>
           <Space>
             <Text type='secondary'>
-              <CalendarOutlined /> {new Date(project.creationTime).toLocaleDateString()}
+              <CalendarOutlined /> {new Date(projectData?.creationTime || Date.now()).toLocaleDateString()}
             </Text>
             <Text type='secondary'>
-              <ProjectOutlined /> {project.slides.length} slides
+              <ProjectOutlined /> {projectData?.slides?.length || 0} slides
             </Text>
           </Space>
         </Col>
@@ -194,7 +224,7 @@ const ProjectDetailPage: React.FC = () => {
               <Row justify='space-between' align='middle' style={{ width: '100%' }}>
                 <Col>
                   <Text strong>
-                    Slide {currentSlideIndex + 1} of {project.slides.length}
+                    Slide {currentSlideIndex + 1} of {slides.length}
                   </Text>
                 </Col>
                 <Col>
@@ -203,7 +233,7 @@ const ProjectDetailPage: React.FC = () => {
                     <Button
                       icon={<RightOutlined />}
                       onClick={nextSlide}
-                      disabled={currentSlideIndex === project.slides.length - 1}
+                      disabled={currentSlideIndex === slides.length - 1}
                     />
                     <Button icon={<FullscreenOutlined />} onClick={enterFullscreen} />
                   </Space>
@@ -243,7 +273,7 @@ const ProjectDetailPage: React.FC = () => {
           {/* Slide Navigation */}
           <Card style={{ marginTop: '16px' }}>
             <Progress
-              percent={((currentSlideIndex + 1) / project.slides.length) * 100}
+              percent={slides.length > 0 ? ((currentSlideIndex + 1) / slides.length) * 100 : 0}
               showInfo={false}
               strokeColor='#1890ff'
             />
@@ -268,21 +298,35 @@ const ProjectDetailPage: React.FC = () => {
             <Space direction='vertical' style={{ width: '100%' }}>
               <div>
                 <Text strong>Status: </Text>
-                <Tag color={getStatusColor(project.status)}>{project.status.replace('_', ' ')}</Tag>
+                <Tag color={getStatusColor(projectData?.status || 'DRAFT')}>
+                  {projectData?.status?.replace('_', ' ') || 'DRAFT'}
+                </Tag>
               </div>
               <div>
                 <Text strong>Created: </Text>
-                <Text>{new Date(project.creationTime).toLocaleDateString()}</Text>
+                <Text>{new Date(projectData?.creationTime || Date.now()).toLocaleDateString()}</Text>
               </div>
               <div>
                 <Text strong>Total Slides: </Text>
-                <Text>{project.slides.length}</Text>
+                <Text>{slides.length}</Text>
               </div>
+              {isDraftProject && projectData?.metadata?.topic && (
+                <div>
+                  <Text strong>Topic: </Text>
+                  <Text>{projectData.metadata.topic}</Text>
+                </div>
+              )}
+              {isDraftProject && projectData?.metadata?.description && (
+                <div>
+                  <Text strong>Description: </Text>
+                  <Text>{projectData.metadata.description}</Text>
+                </div>
+              )}
             </Space>
           </Card>
 
-          {/* Audio Player */}
-          {project.audioProject && (
+          {/* Audio Player - Only show for non-draft projects */}
+          {!isDraftProject && projectData?.audioProject && (
             <Card
               title={
                 <>
@@ -292,14 +336,16 @@ const ProjectDetailPage: React.FC = () => {
             >
               <Space direction='vertical' style={{ width: '100%' }}>
                 <div>
-                  <Text strong>{project.audioProject.title}</Text>
+                  <Text strong>{projectData?.audioProject?.title}</Text>
                   <br />
-                  <Tag color={getAudioStatusColor(project.audioProject.status)}>{project.audioProject.status}</Tag>
+                  <Tag color={getAudioStatusColor(projectData?.audioProject?.status || 'DRAFT')}>
+                    {projectData?.audioProject?.status || 'DRAFT'}
+                  </Tag>
                 </div>
 
-                {project.audioProject.status === 'COMPLETED' && project.audioProject.audioUrl && (
+                {projectData?.audioProject?.status === 'COMPLETED' && projectData.audioProject.audioUrl && (
                   <>
-                    <audio ref={audioRef} src={project.audioProject.audioUrl} />
+                    <audio ref={audioRef} src={projectData.audioProject.audioUrl} />
 
                     {/* Play/Pause Button */}
                     <Button
@@ -343,18 +389,18 @@ const ProjectDetailPage: React.FC = () => {
                   </>
                 )}
 
-                {project.audioProject.status === 'PROCESSING' && (
+                {projectData?.audioProject?.status === 'PROCESSING' && (
                   <div style={{ textAlign: 'center', padding: '20px' }}>
                     <Text type='secondary'>Audio is being processed...</Text>
                   </div>
                 )}
 
-                {project.audioProject.textContent && (
+                {projectData?.audioProject?.textContent && (
                   <div>
                     <Divider />
                     <Text strong>Script:</Text>
                     <Paragraph style={{ marginTop: '8px', fontSize: '14px' }}>
-                      {project.audioProject.textContent}
+                      {projectData.audioProject.textContent}
                     </Paragraph>
                   </div>
                 )}
@@ -365,7 +411,7 @@ const ProjectDetailPage: React.FC = () => {
           {/* Slide List */}
           <Card title='All Slides' style={{ marginTop: '16px' }} size='small'>
             <Space direction='vertical' style={{ width: '100%' }}>
-              {project.slides.map((slide, index) => (
+              {slides.map((slide, index) => (
                 <Button
                   key={slide.id}
                   type={index === currentSlideIndex ? 'primary' : 'text'}
@@ -378,6 +424,24 @@ const ProjectDetailPage: React.FC = () => {
               ))}
             </Space>
           </Card>
+
+          {/* Draft Project Actions */}
+          {isDraftProject && (
+            <Card title='Draft Actions' style={{ marginTop: '16px' }} size='small'>
+              <Space direction='vertical' style={{ width: '100%' }}>
+                <Button type='primary' icon={<SoundOutlined />} block>
+                  Add Audio to Complete Project
+                </Button>
+                <Button
+                  icon={<BookOutlined />}
+                  block
+                  onClick={() => navigate(`/slide-generator-demo?edit=${projectData?.id}`)}
+                >
+                  Edit Slides
+                </Button>
+              </Space>
+            </Card>
+          )}
         </Col>
       </Row>
     </div>

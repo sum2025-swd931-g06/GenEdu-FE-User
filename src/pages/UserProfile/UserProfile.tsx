@@ -13,97 +13,62 @@ import {
 } from '@ant-design/icons'
 import { useAuth } from '../../hooks/useAuth'
 import { useProjects } from '../../hooks/useProjects'
-import type { Project } from '../../types/auth.type'
+import type { Project, ProjectDetail } from '../../types/auth.type'
 import { ProjectStatus, AudioProjectStatus } from '../../types/auth.type'
-import { SavedSlidesService, type SavedSlidePresentation } from '../../services/savedSlidesService'
+import { DraftProjectService } from '../../services/savedSlidesService'
 
 const { Title, Text } = Typography
 const { Meta } = Card
-
-// Extended project type to handle both regular projects and slide-only presentations
-interface CombinedProject extends Project {
-  isSlideOnly?: boolean
-  topic?: string
-  description?: string
-}
 
 const UserProfile: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { projects, loading, error, getProjectStats } = useProjects()
-  const [savedPresentations, setSavedPresentations] = useState<SavedSlidePresentation[]>([])
-  const [presentationsLoading, setPresentationsLoading] = useState(true) // Start as true to show loading initially
+  const [draftProjects, setDraftProjects] = useState<ProjectDetail[]>([])
+  const [draftsLoading, setDraftsLoading] = useState(true)
 
   const [stats, setStats] = useState({
     totalProjects: 0,
     completedProjects: 0,
     totalSlides: 0,
     totalAudioMinutes: 0,
-    totalPresentations: 0,
-    totalSlidesInPresentations: 0
+    draftProjects: 0 // Draft projects count
   })
-
-  // Combine regular projects and slide presentations into one unified list
-  const allProjects = React.useMemo(() => {
-    const combinedProjects: CombinedProject[] = [...projects]
-
-    // Convert saved presentations to project-like objects
-    const presentationProjects: CombinedProject[] = savedPresentations.map((presentation) => ({
-      id: presentation.id,
-      title: presentation.title,
-      status: 'IN_PROGRESS' as const, // Show as processing since they don't have audio
-      creationTime: new Date(presentation.createdAt).getTime(),
-      slideNum: presentation.slideCount,
-      isSlideOnly: true, // Flag to identify slide-only projects
-      topic: presentation.topic,
-      description: presentation.description
-      // No audioProject - this indicates it's slides without audio
-    }))
-
-    return [...combinedProjects, ...presentationProjects]
-  }, [projects, savedPresentations])
 
   useEffect(() => {
     const loadStats = async () => {
       try {
-        // Load saved presentations first (they're synchronous from localStorage)
-        const presentations = SavedSlidesService.getAllPresentations()
-        setSavedPresentations(presentations)
-        setPresentationsLoading(false) // Presentations are loaded immediately
+        // Load draft projects
+        const drafts = DraftProjectService.getAllDraftProjects()
+        setDraftProjects(drafts)
+        setDraftsLoading(false)
 
-        // Calculate presentation stats
-        const totalSlidesInPresentations = presentations.reduce((sum, p) => sum + p.slideCount, 0)
-
-        // Load project stats (these are async and may have delays)
+        // Load project stats
         const projectStats = await getProjectStats()
 
-        // Update combined stats
+        // Update stats
         setStats({
           ...projectStats,
-          totalPresentations: presentations.length,
-          totalSlidesInPresentations
+          draftProjects: drafts.length
         })
       } catch (error) {
         console.error('Error loading stats:', error)
-        // Set default stats if loading fails
-        const presentations = SavedSlidesService.getAllPresentations()
-        setSavedPresentations(presentations)
-        const totalSlidesInPresentations = presentations.reduce((sum, p) => sum + p.slideCount, 0)
+        const drafts = DraftProjectService.getAllDraftProjects()
+        setDraftProjects(drafts)
 
         setStats({
           totalProjects: 0,
           completedProjects: 0,
           totalSlides: 0,
           totalAudioMinutes: 0,
-          totalPresentations: presentations.length,
-          totalSlidesInPresentations
+          draftProjects: drafts.length
         })
-        setPresentationsLoading(false)
+        setDraftsLoading(false)
       }
     }
 
     loadStats()
-  }, [getProjectStats]) // Now getProjectStats is memoized and won't cause infinite re-renders
+  }, [getProjectStats])
 
   const getStatusColor = (status: ProjectStatus) => {
     switch (status) {
@@ -159,16 +124,7 @@ const UserProfile: React.FC = () => {
   }
 
   const handleViewProject = (projectId: string) => {
-    // Check if it's a slide-only project (presentation)
-    const isSlideOnlyProject = savedPresentations.some((p) => p.id === projectId)
-
-    if (isSlideOnlyProject) {
-      // Navigate to saved slides viewer
-      navigate(`/saved-slides?id=${projectId}`)
-    } else {
-      // Navigate to regular project details
-      navigate(`/project/${projectId}`)
-    }
+    navigate(`/project/${projectId}`)
   }
 
   const handleWatchVideo = (projectId: string) => {
@@ -176,9 +132,9 @@ const UserProfile: React.FC = () => {
     navigate(`/video/${projectId}`)
   }
 
-  const handleEditPresentation = (presentationId: string) => {
-    // Navigate to slide generator with the presentation loaded for editing
-    navigate(`/slide-generator-demo?edit=${presentationId}`)
+  const handleEditProject = (projectId: string) => {
+    // Navigate to slide generator with the project loaded for editing
+    navigate(`/slide-generator-demo?edit=${projectId}`)
   }
 
   return (
@@ -205,20 +161,20 @@ const UserProfile: React.FC = () => {
           </Col>
           <Col>
             <Space direction='vertical' align='center'>
-              <Text strong>{stats.totalProjects + stats.totalPresentations}</Text>
-              <Text type='secondary'>Total Projects</Text>
+              <Text strong>{stats.totalProjects}</Text>
+              <Text type='secondary'>Projects</Text>
             </Space>
           </Col>
           <Col>
             <Space direction='vertical' align='center'>
-              <Text strong>{stats.totalPresentations}</Text>
-              <Text type='secondary'>Processing (Slides Only)</Text>
+              <Text strong>{stats.draftProjects}</Text>
+              <Text type='secondary'>Draft Slides</Text>
             </Space>
           </Col>
           <Col>
             <Space direction='vertical' align='center'>
               <Text strong>{stats.completedProjects}</Text>
-              <Text type='secondary'>Completed (With Audio)</Text>
+              <Text type='secondary'>Completed</Text>
             </Space>
           </Col>
         </Row>
@@ -229,7 +185,7 @@ const UserProfile: React.FC = () => {
         <ProjectOutlined /> My Projects
       </Title>
 
-      {(loading && projects.length === 0) || (presentationsLoading && savedPresentations.length === 0) ? (
+      {(loading && projects.length === 0) || (draftsLoading && draftProjects.length === 0) ? (
         <div>
           <Text type='secondary' style={{ marginBottom: '16px', display: 'block' }}>
             Loading your projects...
@@ -246,7 +202,7 @@ const UserProfile: React.FC = () => {
             ))}
           </Row>
         </div>
-      ) : allProjects.length === 0 ? (
+      ) : projects.length === 0 && draftProjects.length === 0 ? (
         <Card>
           <Empty description='No projects found' image={Empty.PRESENTED_IMAGE_SIMPLE}>
             <Button type='primary' onClick={() => navigate('/slide-generator-demo')}>
@@ -255,107 +211,157 @@ const UserProfile: React.FC = () => {
           </Empty>
         </Card>
       ) : (
-        <Row gutter={[16, 16]}>
-          {allProjects.map((project: CombinedProject) => {
-            const isSlideOnly = project.isSlideOnly
-            return (
-              <Col xs={24} sm={12} lg={8} key={project.id}>
-                <Card
-                  hoverable
-                  actions={[
-                    <Button type='link' icon={<EyeOutlined />} onClick={() => handleViewProject(project.id)}>
-                      {isSlideOnly ? 'View Slides' : 'View Details'}
-                    </Button>,
-                    ...(isSlideOnly
-                      ? [
-                          <Button
-                            type='link'
-                            icon={<BookOutlined />}
-                            onClick={() => handleEditPresentation(project.id)}
-                          >
-                            Edit
-                          </Button>
-                        ]
-                      : project.status === 'COMPLETED'
-                        ? [
-                            <Button
-                              type='link'
-                              icon={<PlayCircleOutlined />}
-                              onClick={() => handleWatchVideo(project.id)}
-                            >
-                              Watch Video
-                            </Button>
-                          ]
-                        : [])
-                  ]}
-                  style={{ height: '100%' }}
-                >
-                  <Meta
-                    title={
-                      <Space direction='vertical' size='small' style={{ width: '100%' }}>
-                        <Text strong>{project.title}</Text>
-                        <Tag color={isSlideOnly ? 'orange' : getStatusColor(project.status)}>
-                          {isSlideOnly ? 'PROCESSING (SLIDES ONLY)' : project.status.replace('_', ' ')}
-                        </Tag>
-                      </Space>
-                    }
-                    description={
-                      <Space direction='vertical' size='small' style={{ width: '100%' }}>
-                        <div>
-                          <CalendarOutlined /> {formatDate(project.creationTime)}
-                        </div>
-                        <div>
-                          <ProjectOutlined /> {project.slideNum || 0} slides
-                        </div>
-                        {isSlideOnly && (
-                          <>
+        <div>
+          {/* Real Projects Section */}
+          {projects.length > 0 && (
+            <div style={{ marginBottom: draftProjects.length > 0 ? '32px' : '0' }}>
+              <Row gutter={[16, 16]}>
+                {projects.map((project) => (
+                  <Col xs={24} sm={12} lg={8} key={project.id}>
+                    <Card
+                      hoverable
+                      actions={[
+                        <Button type='link' icon={<EyeOutlined />} onClick={() => handleViewProject(project.id)}>
+                          View Details
+                        </Button>,
+                        ...(project.status === 'COMPLETED'
+                          ? [
+                              <Button
+                                type='link'
+                                icon={<PlayCircleOutlined />}
+                                onClick={() => handleWatchVideo(project.id)}
+                              >
+                                Watch Video
+                              </Button>
+                            ]
+                          : [])
+                      ]}
+                      style={{ height: '100%' }}
+                    >
+                      <Meta
+                        title={
+                          <Space direction='vertical' size='small' style={{ width: '100%' }}>
+                            <Text strong>{project.title}</Text>
+                            <Tag color={getStatusColor(project.status)}>{project.status.replace('_', ' ')}</Tag>
+                          </Space>
+                        }
+                        description={
+                          <Space direction='vertical' size='small' style={{ width: '100%' }}>
+                            <div>
+                              <CalendarOutlined /> {formatDate(project.creationTime)}
+                            </div>
+                            <div>
+                              <ProjectOutlined /> {project.slideNum || 0} slides
+                            </div>
+                            {project.audioProject && (
+                              <div>
+                                <SoundOutlined /> Audio:{' '}
+                                <Tag color={getAudioStatusColor(project.audioProject.status)}>
+                                  {project.audioProject.status}
+                                </Tag>
+                                {project.audioProject.durationSeconds && (
+                                  <Text type='secondary'>({formatDuration(project.audioProject.durationSeconds)})</Text>
+                                )}
+                              </div>
+                            )}
+                            <Divider style={{ margin: '8px 0' }} />
                             <div>
                               <Text type='secondary' style={{ fontSize: '12px' }}>
-                                Topic: {project.topic}
+                                Progress:
+                              </Text>
+                              <Progress
+                                percent={getProjectProgress(project)}
+                                size='small'
+                                strokeColor={getStatusColor(project.status)}
+                              />
+                            </div>
+                          </Space>
+                        }
+                      />
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            </div>
+          )}
+
+          {/* Draft Projects Section */}
+          {draftProjects.length > 0 && (
+            <div>
+              <Title level={4} style={{ marginBottom: '16px', color: '#faad14' }}>
+                <FileTextOutlined /> Draft Projects ({draftProjects.length})
+                <Text type='secondary' style={{ fontSize: '14px', fontWeight: 'normal', marginLeft: '8px' }}>
+                  - Ready to add audio and complete
+                </Text>
+              </Title>
+              <Row gutter={[16, 16]}>
+                {draftProjects.map((project) => (
+                  <Col xs={24} sm={12} lg={8} key={project.id}>
+                    <Card
+                      hoverable
+                      actions={[
+                        <Button type='link' icon={<EyeOutlined />} onClick={() => handleViewProject(project.id)}>
+                          View Details
+                        </Button>,
+                        <Button type='link' icon={<BookOutlined />} onClick={() => handleEditProject(project.id)}>
+                          Edit
+                        </Button>,
+                        <Button type='link' icon={<SoundOutlined />}>
+                          Add Audio
+                        </Button>
+                      ]}
+                      style={{ height: '100%' }}
+                    >
+                      <Meta
+                        title={
+                          <Space direction='vertical' size='small' style={{ width: '100%' }}>
+                            <Text strong>{project.title}</Text>
+                            <Tag color='orange'>DRAFT</Tag>
+                          </Space>
+                        }
+                        description={
+                          <Space direction='vertical' size='small' style={{ width: '100%' }}>
+                            <div>
+                              <CalendarOutlined />{' '}
+                              {new Date(project.creationTime).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </div>
+                            <div>
+                              <FileTextOutlined /> {project.slideNum || 0} slides
+                            </div>
+                            <div>
+                              <Text type='secondary' style={{ fontSize: '12px' }}>
+                                Topic: {project.metadata?.topic || 'N/A'}
                               </Text>
                             </div>
-                            {project.description && (
+                            {project.metadata?.description && (
                               <div>
                                 <Text type='secondary' style={{ fontSize: '12px' }}>
-                                  {project.description.length > 50
-                                    ? `${project.description.substring(0, 50)}...`
-                                    : project.description}
+                                  {project.metadata.description.length > 50
+                                    ? `${project.metadata.description.substring(0, 50)}...`
+                                    : project.metadata.description}
                                 </Text>
                               </div>
                             )}
-                          </>
-                        )}
-                        {!isSlideOnly && project.audioProject && (
-                          <div>
-                            <SoundOutlined /> Audio:{' '}
-                            <Tag color={getAudioStatusColor(project.audioProject.status)}>
-                              {project.audioProject.status}
-                            </Tag>
-                            {project.audioProject.durationSeconds && (
-                              <Text type='secondary'>({formatDuration(project.audioProject.durationSeconds)})</Text>
-                            )}
-                          </div>
-                        )}
-                        <Divider style={{ margin: '8px 0' }} />
-                        <div>
-                          <Text type='secondary' style={{ fontSize: '12px' }}>
-                            {isSlideOnly ? 'Status: Processing Slides (No Audio)' : 'Progress:'}
-                          </Text>
-                          <Progress
-                            percent={isSlideOnly ? 70 : getProjectProgress(project)}
-                            size='small'
-                            strokeColor={isSlideOnly ? '#faad14' : getStatusColor(project.status)}
-                            showInfo={!isSlideOnly}
-                          />
-                        </div>
-                      </Space>
-                    }
-                  />
-                </Card>
-              </Col>
-            )
-          })}
-        </Row>
+                            <Divider style={{ margin: '8px 0' }} />
+                            <div>
+                              <Text type='secondary' style={{ fontSize: '12px' }}>
+                                Status: Slides ready, add audio to complete project
+                              </Text>
+                            </div>
+                          </Space>
+                        }
+                      />
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Quick Actions */}

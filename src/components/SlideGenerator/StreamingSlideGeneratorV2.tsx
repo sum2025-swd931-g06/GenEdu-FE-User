@@ -9,7 +9,7 @@ import { SlideLayoutAssignmentService } from '../../services/slideLayoutAssignme
 import { GeneratedSlide } from '../../types/slide.type'
 import { predefinedThemes } from '../../themes/predefinedThemes'
 import { predefinedLayouts } from '../../layouts/predefinedLayouts'
-import { SavedSlidesService } from '../../services/savedSlidesService'
+import { SavedSlidesService as DraftProjectService } from '../../services/savedSlidesService'
 
 const { Text } = Typography
 const { TabPane } = Tabs
@@ -358,7 +358,7 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
       const slides = Object.values(enhancedSlideMap)
       const topic = values.topic || generationParams?.topic || initialTopic || 'Generated Slides'
 
-      const savedPresentation = SavedSlidesService.savePresentation(
+      const savedProject = DraftProjectService.saveDraftProject(
         values.title,
         slides,
         topic,
@@ -372,10 +372,10 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
       }
 
       notification.success({
-        message: 'Presentation Saved Successfully!',
+        message: 'Draft Project Saved Successfully!',
         description: (
           <div>
-            <div>{`"${values.title}" with ${slides.length} slides has been saved to your profile.`}</div>
+            <div>{`"${values.title}" with ${slides.length} slides has been saved as a draft project to your profile.`}</div>
             <div style={{ marginTop: '8px' }}>
               <Button
                 type='link'
@@ -397,7 +397,7 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
       setSaveModalVisible(false)
       saveForm.resetFields()
 
-      console.log('Saved presentation:', savedPresentation)
+      console.log('Saved draft project:', savedProject)
     } catch (error) {
       console.error('Error saving presentation:', error)
       notification.error({

@@ -28,15 +28,15 @@ import {
   SearchOutlined
 } from '@ant-design/icons'
 import { SavedSlidesService, SavedSlidePresentation } from '../../services/savedSlidesService'
-import SlidePreview from '../SlideGenerator/SlidePreview'
+import type { ProjectDetail } from '../../types/auth.type'
 
 const { Text } = Typography
 const { Search } = Input
 
 const SavedSlidesManager: React.FC = () => {
-  const [presentations, setPresentations] = useState<SavedSlidePresentation[]>([])
-  const [filteredPresentations, setFilteredPresentations] = useState<SavedSlidePresentation[]>([])
-  const [selectedPresentation, setSelectedPresentation] = useState<SavedSlidePresentation | null>(null)
+  const [presentations, setPresentations] = useState<ProjectDetail[]>([])
+  const [filteredPresentations, setFilteredPresentations] = useState<ProjectDetail[]>([])
+  const [selectedPresentation, setSelectedPresentation] = useState<ProjectDetail | null>(null)
   const [previewModalVisible, setPreviewModalVisible] = useState(false)
   const [stats, setStats] = useState({
     totalPresentations: 0,
@@ -52,21 +52,27 @@ const SavedSlidesManager: React.FC = () => {
   }, [])
 
   const loadPresentations = () => {
-    const saved = SavedSlidesService.getAllPresentations()
+    const saved = SavedSlidesService.getAllDraftProjects()
     setPresentations(saved)
     setFilteredPresentations(saved)
   }
 
   const loadStats = () => {
-    const currentStats = SavedSlidesService.getStats()
-    setStats(currentStats)
+    const currentStats = SavedSlidesService.getDraftProjectStats()
+    setStats({
+      totalPresentations: currentStats.totalDrafts,
+      totalSlides: currentStats.totalSlides,
+      totalWords: 0, // Can calculate this later if needed
+      layoutDistribution: {}, // Can add this later if needed
+      themesUsed: currentStats.themes
+    })
   }
 
   const handleSearch = (value: string) => {
     if (!value.trim()) {
       setFilteredPresentations(presentations)
     } else {
-      const filtered = SavedSlidesService.searchPresentations(value)
+      const filtered = SavedSlidesService.searchDraftProjects(value)
       setFilteredPresentations(filtered)
     }
   }
@@ -84,7 +90,7 @@ const SavedSlidesManager: React.FC = () => {
       okType: 'danger',
       cancelText: 'Cancel',
       onOk: () => {
-        const success = SavedSlidesService.deletePresentation(presentationId)
+        const success = SavedSlidesService.deleteDraftProject(presentationId)
         if (success) {
           message.success('Presentation deleted successfully')
           loadPresentations()
@@ -97,7 +103,7 @@ const SavedSlidesManager: React.FC = () => {
   }
 
   const handleExport = (presentation: SavedSlidePresentation) => {
-    const data = SavedSlidesService.exportPresentation(presentation.id)
+    const data = SavedSlidesService.exportDraftProject(presentation.id)
     if (data) {
       const blob = new Blob([data], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
@@ -114,17 +120,7 @@ const SavedSlidesManager: React.FC = () => {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
-
-  const getActionMenu = (presentation: SavedSlidePresentation) => (
+  const getActionMenu = (presentation: ProjectDetail) => (
     <Menu>
       <Menu.Item key='preview' icon={<EyeOutlined />} onClick={() => handlePreview(presentation)}>
         Preview Slides
@@ -219,18 +215,18 @@ const SavedSlidesManager: React.FC = () => {
                 >
                   <Space direction='vertical' size='small' style={{ width: '100%' }}>
                     <div>
-                      <Tag color='blue'>{presentation.topic}</Tag>
-                      <Tag>{presentation.slideCount} slides</Tag>
+                      <Tag color='blue'>{presentation.metadata?.topic || 'No topic'}</Tag>
+                      <Tag>{presentation.slideNum || 0} slides</Tag>
                     </div>
 
-                    {presentation.description && (
+                    {presentation.metadata?.description && (
                       <Text type='secondary' style={{ fontSize: '12px' }} ellipsis>
-                        {presentation.description}
+                        {presentation.metadata.description}
                       </Text>
                     )}
 
                     <div style={{ fontSize: '11px', color: '#999' }}>
-                      <CalendarOutlined /> {formatDate(presentation.createdAt)}
+                      <CalendarOutlined /> {new Date(presentation.creationTime).toLocaleDateString()}
                     </div>
 
                     {presentation.metadata?.layoutDistribution && (
@@ -267,7 +263,7 @@ const SavedSlidesManager: React.FC = () => {
         title={
           <Space>
             <span>{selectedPresentation?.title}</span>
-            <Tag color='blue'>{selectedPresentation?.slideCount} slides</Tag>
+            <Tag color='blue'>{selectedPresentation?.slideNum || 0} slides</Tag>
           </Space>
         }
         open={previewModalVisible}
@@ -294,28 +290,35 @@ const SavedSlidesManager: React.FC = () => {
               <Row gutter={16}>
                 <Col span={12}>
                   <Text>
-                    <strong>Topic:</strong> {selectedPresentation.topic}
+                    <strong>Topic:</strong> {selectedPresentation.metadata?.topic || 'No topic'}
                   </Text>
                 </Col>
                 <Col span={12}>
                   <Text>
-                    <strong>Created:</strong> {formatDate(selectedPresentation.createdAt)}
+                    <strong>Created:</strong> {new Date(selectedPresentation.creationTime).toLocaleDateString()}
                   </Text>
                 </Col>
               </Row>
-              {selectedPresentation.description && (
+              {selectedPresentation.metadata?.description && (
                 <div style={{ marginTop: 8 }}>
                   <Text>
-                    <strong>Description:</strong> {selectedPresentation.description}
+                    <strong>Description:</strong> {selectedPresentation.metadata.description}
                   </Text>
                 </div>
               )}
             </Card>
 
             {/* Slides Preview */}
-            <div>
+            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
               {selectedPresentation.slides.map((slide) => (
-                <SlidePreview key={slide.slideId} slide={slide} isActive={false} showLayoutDetails={true} />
+                <Card key={slide.id} size='small' style={{ marginBottom: 8 }}>
+                  <div>
+                    <Text strong>{slide.title}</Text>
+                    <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
+                      <div dangerouslySetInnerHTML={{ __html: slide.content }} />
+                    </div>
+                  </div>
+                </Card>
               ))}
             </div>
           </div>

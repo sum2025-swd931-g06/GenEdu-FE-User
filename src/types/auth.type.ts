@@ -1,4 +1,5 @@
 import type Keycloak from 'keycloak-js'
+import type { SlideGenerationParams } from './slide.type'
 
 // Project types
 export interface Project {
@@ -8,6 +9,15 @@ export interface Project {
   creationTime: number
   slideNum?: number
   audioProject?: AudioProject
+  updatedAt?: number
+  metadata?: {
+    topic?: string
+    description?: string
+    generationParams?: SlideGenerationParams
+    totalWords?: number
+    layoutDistribution?: Record<string, number>
+    themes?: string[]
+  }
 }
 
 export type ProjectStatus = 'DRAFT' | 'IN_PROGRESS' | 'COMPLETED'
