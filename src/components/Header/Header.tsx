@@ -34,8 +34,8 @@ const Header: React.FC = () => {
         logout()
         navigate('/')
         break
-      case 'generate-slides':
-        navigate('/generate-slides')
+      case 'slide-generator-demo':
+        navigate('/slide-generator-demo')
         break
       case 'settings':
         // Navigate to settings page when implemented
@@ -53,7 +53,7 @@ const Header: React.FC = () => {
       label: 'Home'
     },
     {
-      key: 'generate-slides',
+      key: 'slide-generator-demo',
       icon: <ExperimentOutlined />,
       label: 'AI Slide Generator'
     },
@@ -92,7 +92,14 @@ const Header: React.FC = () => {
   ]
 
   const currentPath = location.pathname
-  const selectedKeys = currentPath === '/' ? ['home'] : currentPath === '/profile' ? ['profile'] : []
+  const selectedKeys =
+    currentPath === '/'
+      ? ['home']
+      : currentPath === '/profile'
+        ? ['profile']
+        : currentPath === '/slide-generator-demo'
+          ? ['slide-generator-demo']
+          : []
 
   return (
     <AntHeader

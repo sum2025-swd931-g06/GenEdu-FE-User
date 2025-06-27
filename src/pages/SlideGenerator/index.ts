@@ -1,1 +1,1 @@
-export { default } from './SlideGenerator'
+export { default } from './SlideGeneratorDemo'

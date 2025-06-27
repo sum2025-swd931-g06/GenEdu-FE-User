@@ -1,19 +1,19 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import type { AuthClientError } from '@react-keycloak/core'
-import ThemeProvider from './contexts/ThemeContext'
-import KeycloakProviderWithInit from './core/keycloak/KeycloakProviderWithInit'
-import { AuthProvider } from './contexts/AuthContext'
-import keycloak from './core/keycloak'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import { AuthProvider } from './contexts/AuthContext'
+import ThemeProvider from './contexts/ThemeContext'
+import keycloak from './core/keycloak'
+import KeycloakProviderWithInit from './core/keycloak/KeycloakProviderWithInit'
 import Home from './pages/Home'
-import Presentation from './pages/Presentation/Presentation'
-import UserProfile from './pages/UserProfile'
-import ProjectDetail from './pages/ProjectDetail'
-import VideoPlayer from './pages/VideoPlayer'
 import Login from './pages/Login'
+import Presentation from './pages/Presentation/Presentation'
+import ProjectDetail from './pages/ProjectDetail'
 import Register from './pages/Register'
-import SlideGenerator from './pages/SlideGenerator'
+import SlideGeneratorDemo from './pages/SlideGenerator/SlideGeneratorDemo'
+import UserProfile from './pages/UserProfile'
+import VideoPlayer from './pages/VideoPlayer'
 
 function App() {
   const handleOnEvent = async (event: string, error: AuthClientError | undefined) => {
@@ -83,13 +83,13 @@ const AppRoutes: React.FC = () => {
           }
         />
 
-        {/* New AI Slide Generator Route */}
+        {/* Enhanced AI Slide Generator Demo Route */}
         <Route
-          path='/generate-slides'
+          path='/slide-generator-demo'
           element={
             <Layout>
               <ProtectedRoute>
-                <SlideGenerator />
+                <SlideGeneratorDemo />
               </ProtectedRoute>
             </Layout>
           }
