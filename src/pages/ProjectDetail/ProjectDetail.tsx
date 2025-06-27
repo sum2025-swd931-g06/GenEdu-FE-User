@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, Button, Typography, Row, Col, Space, Tag, Divider, Progress, message, Slider, Spin } from 'antd'
 import {
@@ -18,6 +18,7 @@ import { useProject } from '../../hooks/useProjects'
 import type { ProjectDetail } from '../../types/auth.type'
 import { ProjectStatus, AudioProjectStatus } from '../../types/auth.type'
 import { DraftProjectService } from '../../services/savedSlidesService'
+import RevealSlideViewer, { RevealSlideViewerRef } from '../../components/SlideViewer'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -25,6 +26,7 @@ const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const audioRef = useRef<HTMLAudioElement>(null)
+  const slideViewerRef = useRef<RevealSlideViewerRef>(null)
 
   // Use the dedicated useProject hook for loading project details
   const { projectDetail: project, loading: projectLoading, error: projectError } = useProject(id)
@@ -39,6 +41,7 @@ const ProjectDetailPage: React.FC = () => {
   const [audioCurrentTime, setAudioCurrentTime] = useState(0)
   const [audioDuration, setAudioDuration] = useState(0)
   const [volume, setVolume] = useState(1)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   // Check if this is a draft project or regular project
   useEffect(() => {
@@ -80,6 +83,18 @@ const ProjectDetailPage: React.FC = () => {
       audio.removeEventListener('timeupdate', updateTime)
       audio.removeEventListener('loadedmetadata', updateDuration)
       audio.removeEventListener('ended', handleEnded)
+    }
+  }, [])
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
     }
   }, [])
 
@@ -143,24 +158,76 @@ const ProjectDetailPage: React.FC = () => {
     }
   }
 
-  const nextSlide = () => {
-    if (projectData && currentSlideIndex < projectData.slides.length - 1) {
-      setCurrentSlideIndex(currentSlideIndex + 1)
-    }
-  }
+  // Determine what data to use - we now have only one Project type
+  const projectData = isDraftProject ? draftProject : project
+  const slides = projectData?.slides || []
 
-  const prevSlide = () => {
-    if (currentSlideIndex > 0) {
-      setCurrentSlideIndex(currentSlideIndex - 1)
+  // Navigation functions with useCallback to prevent dependency issues
+  const nextSlide = useCallback(() => {
+    if (slideViewerRef.current) {
+      slideViewerRef.current.nextSlide()
+    } else {
+      // Fallback for when reveal viewer is not available
+      if (projectData && currentSlideIndex < projectData.slides.length - 1) {
+        setCurrentSlideIndex(currentSlideIndex + 1)
+      }
     }
-  }
+  }, [slideViewerRef, projectData, currentSlideIndex])
 
-  const enterFullscreen = () => {
-    const slideContainer = document.getElementById('slide-container')
-    if (slideContainer && slideContainer.requestFullscreen) {
-      slideContainer.requestFullscreen()
+  const prevSlide = useCallback(() => {
+    if (slideViewerRef.current) {
+      slideViewerRef.current.prevSlide()
+    } else {
+      // Fallback for when reveal viewer is not available
+      if (currentSlideIndex > 0) {
+        setCurrentSlideIndex(currentSlideIndex - 1)
+      }
     }
-  }
+  }, [slideViewerRef, currentSlideIndex])
+
+  const handleSlideChange = useCallback((slideIndex: number) => {
+    setCurrentSlideIndex(slideIndex)
+  }, [])
+
+  const enterFullscreen = useCallback(() => {
+    // Find the reveal container within our component
+    const revealContainer = document.querySelector('.reveal')
+    if (revealContainer && revealContainer.requestFullscreen) {
+      revealContainer.requestFullscreen()
+    }
+  }, [])
+
+  // Keyboard navigation for fullscreen mode
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle keyboard events when in fullscreen mode
+      if (!isFullscreen) return
+
+      switch (event.key) {
+        case 'ArrowLeft':
+          event.preventDefault()
+          prevSlide()
+          break
+        case 'ArrowRight': {
+          event.preventDefault()
+          nextSlide()
+          break
+        }
+        case 'Escape':
+          event.preventDefault()
+          if (document.fullscreenElement) {
+            document.exitFullscreen()
+          }
+          break
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isFullscreen, nextSlide, prevSlide])
 
   if (loading || (projectLoading && !isDraftProject)) {
     return (
@@ -180,10 +247,6 @@ const ProjectDetailPage: React.FC = () => {
       </div>
     )
   }
-
-  // Determine what data to use - we now have only one Project type
-  const projectData = isDraftProject ? draftProject : project
-  const slides = projectData?.slides || []
 
   const currentSlide = slides[currentSlideIndex]
 
@@ -240,34 +303,16 @@ const ProjectDetailPage: React.FC = () => {
                 </Col>
               </Row>
             }
-            style={{ height: '500px' }}
           >
-            <div
-              id='slide-container'
-              style={{
-                height: '400px',
-                border: '1px solid #f0f0f0',
-                borderRadius: '8px',
-                padding: '24px',
-                backgroundColor: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative'
-              }}
-            >
-              <div
-                style={{
-                  textAlign: 'center',
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center'
-                }}
-                dangerouslySetInnerHTML={{ __html: currentSlide.content }}
-              />
-            </div>
+            <RevealSlideViewer
+              ref={slideViewerRef}
+              slides={slides}
+              currentSlideIndex={currentSlideIndex}
+              onSlideChange={handleSlideChange}
+              height='400px'
+              embedded={true}
+              showControls={false}
+            />
           </Card>
 
           {/* Slide Navigation */}
