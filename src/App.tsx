@@ -13,6 +13,7 @@ import ProjectDetail from './pages/ProjectDetail'
 import VideoPlayer from './pages/VideoPlayer'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import SlideGenerator from './pages/SlideGenerator'
 
 function App() {
   const handleOnEvent = async (event: string, error: AuthClientError | undefined) => {
@@ -77,6 +78,18 @@ const AppRoutes: React.FC = () => {
             <Layout>
               <ProtectedRoute>
                 <ProjectDetail />
+              </ProtectedRoute>
+            </Layout>
+          }
+        />
+
+        {/* New AI Slide Generator Route */}
+        <Route
+          path='/generate-slides'
+          element={
+            <Layout>
+              <ProtectedRoute>
+                <SlideGenerator />
               </ProtectedRoute>
             </Layout>
           }

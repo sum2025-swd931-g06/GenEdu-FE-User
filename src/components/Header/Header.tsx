@@ -8,7 +8,8 @@ import {
   LogoutOutlined,
   SettingOutlined,
   MenuOutlined,
-  PlusOutlined
+  PlusOutlined,
+  ExperimentOutlined
 } from '@ant-design/icons'
 import { useAuth } from '../../hooks/useAuth'
 
@@ -33,6 +34,9 @@ const Header: React.FC = () => {
         logout()
         navigate('/')
         break
+      case 'generate-slides':
+        navigate('/generate-slides')
+        break
       case 'settings':
         // Navigate to settings page when implemented
         break
@@ -47,6 +51,11 @@ const Header: React.FC = () => {
       key: 'home',
       icon: <HomeOutlined />,
       label: 'Home'
+    },
+    {
+      key: 'generate-slides',
+      icon: <ExperimentOutlined />,
+      label: 'AI Slide Generator'
     },
     // Only show profile menu item for authenticated users
     ...(isAuthenticated

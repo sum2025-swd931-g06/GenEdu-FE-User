@@ -2,6 +2,7 @@ import {
   AppstoreOutlined,
   BgColorsOutlined,
   BulbOutlined,
+  ExperimentOutlined,
   EyeOutlined,
   RocketOutlined,
   SoundOutlined
@@ -47,6 +48,20 @@ export default function Home() {
           Transform your ideas into stunning presentations with AI-powered slide generation and speech-to-text
           technology.
         </Paragraph>
+
+        <Card
+          hoverable
+          style={{ textAlign: 'center', minHeight: 200 }}
+          cover={<ExperimentOutlined style={{ fontSize: 48, color: '#1890ff', paddingTop: 24 }} />}
+        >
+          <Card.Meta
+            title='AI Slide Generator'
+            description='Generate professional presentations with AI streaming technology'
+          />
+          <Button type='primary' style={{ marginTop: 16 }} onClick={() => navigate('/generate-slides')}>
+            Try Now
+          </Button>
+        </Card>
 
         <Card style={{ maxWidth: '500px', margin: '0 auto' }}>
           <form onSubmit={handleSubmit}>

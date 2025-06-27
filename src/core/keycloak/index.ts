@@ -1,17 +1,17 @@
 import Keycloak from 'keycloak-js'
 
-const isDev = process.env.NODE_ENV === 'development'
+export const isDev = process.env.NODE_ENV === 'development'
 
 export const config = {
   kc: {
-    KEYCLOAK_BASE_URL: isDev ? 'https://kc.lch.id.vn' : 'https://kc.lch.id.vn',
+    KEYCLOAK_BASE_URL: isDev ? 'http://localhost:9099' : 'https://kc.lch.id.vn',
     REALM_NAME: 'GenEdu',
     CLIENT_ID: 'genedu-fe'
   }
 }
 
 // Keycloak configuration
-const keycloakConfig = {
+export const keycloakConfig = {
   url: config.kc.KEYCLOAK_BASE_URL,
   realm: config.kc.REALM_NAME,
   clientId: config.kc.CLIENT_ID

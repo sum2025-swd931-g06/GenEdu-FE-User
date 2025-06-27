@@ -1,4 +1,4 @@
-import { HttpHandler, http, HttpResponse } from 'msw'
+import { HttpHandler, http, HttpResponse, passthrough } from 'msw'
 import { mockUser, mockProjects, mockProjectDetails } from '../mocks/projectData'
 
 export const handlers: HttpHandler[] = [
@@ -54,5 +54,18 @@ export const handlers: HttpHandler[] = [
   http.delete('/api/projects/:id', ({ params }) => {
     const { id } = params
     return HttpResponse.json({ message: `Project ${id} deleted successfully` })
+  }),
+
+  http.get('http://localhost:8222/api/v1/projects/stream/*', () => {
+    return passthrough()
+  }),
+
+  http.options('http://localhost:8222/api/v1/projects/stream/*', () => {
+    return passthrough()
+  }),
+
+  // Bypass all Gateway requests
+  http.all('http://localhost:8222/*', () => {
+    return passthrough()
   })
 ]
