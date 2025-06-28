@@ -46,12 +46,12 @@ export const useProjects = () => {
     }
   }, [user, loadUserProjects, loadUserAudioProjects])
 
-  const createProject = async (title: string, topic: string): Promise<Project | null> => {
+  const createProject = async (title: string): Promise<Project | null> => {
     try {
       setLoading(true)
       setError(null)
 
-      const newProject = await projectService.createProject(title, topic)
+      const newProject = await projectService.createProject(title)
       setProjects((prev) => [newProject, ...prev])
       return newProject
     } catch (err) {

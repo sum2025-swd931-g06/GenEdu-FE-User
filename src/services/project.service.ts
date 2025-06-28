@@ -1,5 +1,5 @@
-import { Project, ProjectDetail, AudioProject, UserData } from '../types/auth.type'
-import { hoangUser, hoangProjects, hoangAudioProjects, hoangProjectDetails } from '../mocks/hoangMockData'
+import { hoangAudioProjects, hoangProjectDetails, hoangProjects, hoangUser } from '../mocks/hoangMockData'
+import { AudioProject, Project, ProjectDetail, UserData } from '../types/auth.type'
 
 /**
  * Mock Project Service for managing user projects and audio content
@@ -88,7 +88,7 @@ export class MockProjectService {
   /**
    * Create a new project (simulation)
    */
-  public async createProject(title: string, topic: string): Promise<Project> {
+  public async createProject(title: string): Promise<Project> {
     await this.delay(800)
 
     const newProject: Project = {

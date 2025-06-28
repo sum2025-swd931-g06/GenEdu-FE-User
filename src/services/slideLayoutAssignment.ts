@@ -1,8 +1,8 @@
-import type { SlideLayout, LayoutRegion } from '../types/layout.type'
-import type { Theme } from '../types/theme.type'
-import type { GeneratedSlide, SlideContent, SlideGenerationParams } from '../types/slide.type'
-import { predefinedLayouts, getLayoutById } from '../layouts/predefinedLayouts'
+import { getLayoutById, predefinedLayouts } from '../layouts/predefinedLayouts'
 import { predefinedThemes } from '../themes/predefinedThemes'
+import type { SlideLayout } from '../types/layout.type'
+import type { GeneratedSlide, SlideContent } from '../types/slide.type'
+import type { Theme } from '../types/theme.type'
 
 export interface LayoutAssignmentRules {
   slideTypeToLayout: Record<string, string>

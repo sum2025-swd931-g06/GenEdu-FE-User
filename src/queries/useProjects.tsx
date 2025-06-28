@@ -54,7 +54,7 @@ export const useUpdateProject = () => {
 
   return useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<Project> }) => projectAPI.update(id, updates),
-    onSuccess: (data, variables) => {
+    onSuccess: (variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.user.projects })
       queryClient.invalidateQueries({ queryKey: queryKeys.project.detail(variables.id) })
     }

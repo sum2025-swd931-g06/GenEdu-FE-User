@@ -40,9 +40,7 @@ const SlidePreview: React.FC<SlidePreviewProps> = ({ slide, isActive = false, sh
                 border: `1px dashed ${theme?.colors.accent || '#ddd'}`
               }}
             >
-              <Tag size='small' color={theme?.colors.accent || 'blue'}>
-                {contentItem.type}
-              </Tag>
+              <Tag color={theme?.colors.accent || 'blue'}>{contentItem.type}</Tag>
               <div style={{ marginTop: '4px' }}>
                 {contentItem.type === 'title' ? (
                   <Title level={4} style={{ margin: 0, color: theme?.colors.text.primary }}>
@@ -108,10 +106,8 @@ const SlidePreview: React.FC<SlidePreviewProps> = ({ slide, isActive = false, sh
       extra={
         showLayoutDetails && (
           <Space>
-            <Tag size='small'>{layout.metadata.difficulty}</Tag>
-            <Tag size='small' color='green'>
-              {layout.structure.regions.length} regions
-            </Tag>
+            <Tag>{layout.metadata.difficulty}</Tag>
+            <Tag>{layout.structure.regions.length} regions</Tag>
           </Space>
         )
       }

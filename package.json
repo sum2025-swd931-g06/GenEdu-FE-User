@@ -24,6 +24,7 @@
     "keycloak-js": "^26.1.5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-hamster-loading": "^1.0.0",
     "react-icons": "^5.5.0",
     "react-player": "^2.16.0",
     "react-router-dom": "^7.6.0",

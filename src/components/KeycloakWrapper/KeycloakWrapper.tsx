@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react'
 import { ReactKeycloakProvider } from '@react-keycloak/web'
-import { Spin, Alert, Typography, Card } from 'antd'
-import { keycloak, initOptions, isKeycloakInitialized, setKeycloakInitialized } from '../../config/keycloak'
+import { Alert, Card, Spin, Typography } from 'antd'
+import React, { useEffect, useRef, useState } from 'react'
+import { initOptions, isKeycloakInitialized, keycloak, setKeycloakInitialized } from '../../config/keycloak'
 
 const { Title, Text } = Typography
 
@@ -88,6 +88,10 @@ const KeycloakWrapper: React.FC<KeycloakWrapperProps> = ({ children }) => {
       </Card>
     </div>
   )
+
+  if (isInitializing) {
+    return <LoadingComponent />
+  }
 
   if (initError) {
     return <ErrorComponent />

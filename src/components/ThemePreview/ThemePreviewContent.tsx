@@ -1,9 +1,9 @@
+import { FileTextOutlined, PlayCircleOutlined, StarFilled, UserOutlined } from '@ant-design/icons'
+import { Avatar, Button, Card, Progress, Space, Tag, Typography } from 'antd'
 import React from 'react'
-import { Card, Typography, Button, Space, Tag, Progress, Avatar } from 'antd'
-import { UserOutlined, StarFilled, PlayCircleOutlined, FileTextOutlined } from '@ant-design/icons'
 import type { Theme } from '../../types/theme.type'
 
-const { Title, Paragraph, Text } = Typography
+const { Title, Text } = Typography
 
 interface ThemePreviewContentProps {
   theme: Theme

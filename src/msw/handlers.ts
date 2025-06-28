@@ -30,7 +30,7 @@ export const handlers: HttpHandler[] = [
     return HttpResponse.json(
       {
         id: Date.now().toString(),
-        ...newProject,
+        ...(newProject && typeof newProject === 'object' && !Array.isArray(newProject) ? newProject : {}),
         creationTime: Date.now(),
         status: 'DRAFT'
       },
@@ -43,9 +43,12 @@ export const handlers: HttpHandler[] = [
     const { id } = params
     const updates = await request.json()
 
+    // Ensure updates is an object before spreading
+    const safeUpdates = updates && typeof updates === 'object' && !Array.isArray(updates) ? updates : {}
+
     return HttpResponse.json({
       id,
-      ...updates,
+      ...safeUpdates,
       updatedTime: Date.now()
     })
   }),
