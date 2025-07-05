@@ -1,15 +1,17 @@
-import { ClearOutlined, PlayCircleOutlined, SaveOutlined, StopOutlined } from '@ant-design/icons'
-import { useKeycloak } from '@react-keycloak/web'
-import { Button, Card, Progress, Space, Typography, notification, Tabs, Switch, Select, Modal, Input, Form } from 'antd'
+import { ClearOutlined, SaveOutlined, StopOutlined } from '@ant-design/icons'
+import { Button, Card, Form, Input, Modal, notification, Progress, Select, Space, Switch, Tabs, Typography } from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
-import SlideGeneratorForm, { SlideGenerationParams } from './SlideGeneratorForm'
-import DebugInfo from './DebugInfo'
-import { SlideLayoutAssignmentService } from '../../services/slideLayoutAssignment'
-import { GeneratedSlide } from '../../types/slide.type'
-import { predefinedThemes } from '../../themes/predefinedThemes'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useTokenManager } from '../../hooks/useTokenManager'
 import { predefinedLayouts } from '../../layouts/predefinedLayouts'
+import useLessons from '../../queries/useLesson'
 import { SavedSlidesService as DraftProjectService } from '../../services/savedSlidesService'
+import { SlideLayoutAssignmentService } from '../../services/slideLayoutAssignment'
+import { predefinedThemes } from '../../themes/predefinedThemes'
+import { GeneratedSlide } from '../../types/slide.type'
+import { TypedSlideData } from '../../types/slideStream.type'
+import RevealPresentation from '../RevealSlides/RevealPresentation'
+import SlideGeneratorForm, { SlideGenerationParams } from './SlideGeneratorForm'
 
 const { Text } = Typography
 const { TabPane } = Tabs
@@ -26,7 +28,7 @@ interface StreamingSlideGeneratorProps {
 }
 
 const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onSlidesGenerated, projectId }) => {
-  const { keycloak } = useKeycloak()
+  const { getAuthToken } = useTokenManager()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const [isStreaming, setIsStreaming] = useState(false)
@@ -45,6 +47,19 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
   const [saveModalVisible, setSaveModalVisible] = useState(false)
   const [saveForm] = Form.useForm()
   const [saving, setSaving] = useState(false)
+
+  // Stream slide
+  const [streamSlides, setStreamSlides] = useState<TypedSlideData[]>([])
+  const [showRevealPresentation, setShowRevealPresentation] = useState(false)
+
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen)
+  }
+
+  // All Lessons
+  const { data: lessons, isLoading, error } = useLessons()
 
   // Read topic from URL parameters on component mount
   useEffect(() => {
@@ -65,6 +80,7 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const streamReaderRef = useRef<ReadableStreamDefaultReader | null>(null)
+  const formAbortControllerRef = useRef<AbortController | null>(null)
 
   const appendWordToSlide = (slideId: string, slideType: string, word: string) => {
     if (!word || word.trim() === '') return
@@ -111,90 +127,58 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
     setCurrentSlide(parseInt(slideId))
   }
 
-  const getAuthToken = (): string | null => {
-    // Try to get token from Keycloak first
-    if (keycloak.authenticated && keycloak.token) {
-      console.log('Using Keycloak token')
-      return keycloak.token
-    }
+  const handleFormSubmit = async (params: SlideGenerationParams) => {
+    setGenerationParams(params)
 
-    // Fallback to localStorage
-    const localToken = localStorage.getItem('token')
-    if (localToken) {
-      console.log('Using localStorage token')
-      return localToken
-    }
+    console.log(`data from form:`, params)
 
-    console.log('No token available')
-    return null
-  }
-
-  const startStreaming = async (params?: SlideGenerationParams) => {
-    // Check authentication
-    const token = getAuthToken()
-    if (!token) {
-      notification.error({
-        message: 'Authentication Error',
-        description: 'Please log in to generate slides'
-      })
-      return
+    const mappedParams = {
+      lessonId: params.lesson?.lessonId || '',
+      title: params.topic || initialTopic || 'Generated Slides',
+      customInstructions: params.description || `Auto-generated presentation about ${params.topic || initialTopic}`,
+      slideNumber: params.slideCount || 6
     }
 
     try {
       setIsStreaming(true)
-      setSlideMap({})
-      setEnhancedSlideMap({})
+      setStreamSlides([]) // Clear existing stream slides
       setProgress(0)
       setCurrentSlide(0)
       setTotalWords(0)
 
-      // Create new AbortController for this request
-      abortControllerRef.current = new AbortController()
-
-      let url = 'http://localhost:8222/api/v1/projects/stream/slide-content'
-      let requestOptions: RequestInit = {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'text/event-stream;charset=UTF-8'
-        },
-        signal: abortControllerRef.current.signal
+      // Get auth token
+      const token = getAuthToken()
+      if (!token) {
+        notification.error({
+          message: 'Authentication Error',
+          description: 'Please log in to generate slides'
+        })
+        return
       }
 
-      // If we have generation parameters and not in demo mode, prepare POST request
-      if (params && !isDemoMode) {
-        console.log('Starting slide generation with parameters:', params)
-        url = 'http://localhost:8222/api/v1/projects/stream/slide-content'
-        requestOptions = {
+      // Make the streaming request directly
+      const response = await fetch(
+        `http://localhost:8222/api/v1/lecture-contents/d0a8519f-1907-48a6-a5c4-3eb8dce3ce91/slide-content`,
+        {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
-            Accept: 'text/event-stream;charset=UTF-8'
+            Accept: 'application/json;charset=UTF-8' // Changed from text/event-stream
           },
           body: JSON.stringify({
-            topic: params.topic,
-            description: params.description,
-            slideCount: params.slideCount,
-            difficulty: params.difficulty,
-            slideTypes: params.slideTypes,
-            includeAudio: params.includeAudio,
-            language: params.language,
-            additionalRequirements: params.additionalRequirements,
-            keywords: params.keywords,
-            projectId: projectId
+            lessonId: params.lesson?.lessonId.toString() || '',
+            chapterId: params.lesson?.chapterId.toString() || '',
+            subjectId: '1',
+            materialId: '1',
+            schoolClassId: '1',
+            lessonContentId: '1',
+            CustomerInstructions:
+              params.description || `Auto-generated presentation about ${params.topic || initialTopic}`
           }),
-          signal: abortControllerRef.current.signal
+          signal: formAbortControllerRef.current?.signal || new AbortController().signal
         }
-      } else {
-        console.log('Starting slide generation demo...')
-      }
-
-      console.log('Request URL:', url)
-      console.log('Request method:', requestOptions.method)
-      console.log('Token length:', token.length)
-
-      const response = await fetch(url, requestOptions)
+      )
 
       console.log('Response status:', response.status)
       console.log('Response headers:', Object.fromEntries(response.headers.entries()))
@@ -205,17 +189,63 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`)
       }
 
-      const reader = response.body?.getReader()
-      if (!reader) {
-        throw new Error('Failed to get response reader')
+      // Check if response is actually a stream
+      const contentType = response.headers.get('content-type')
+      if (contentType?.includes('text/event-stream')) {
+        // Handle as stream
+        await handleStreamResponse(response, params)
+      } else {
+        // Handle as regular JSON response
+        const jsonResponse = await response.json()
+        console.log('JSON Response:', jsonResponse)
+        // Handle JSON response if needed
       }
+    } catch (error) {
+      console.error('Error creating/streaming slides:', error)
 
-      streamReaderRef.current = reader
-      const decoder = new TextDecoder('utf-8')
-      let buffer = ''
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      const errorName = error instanceof Error ? error.name : ''
 
-      console.log('Starting to read stream...')
+      if (errorName === 'AbortError') {
+        notification.info({
+          message: 'Generation Stopped',
+          description: 'Slide generation has been stopped by user'
+        })
+      } else if (errorMessage.includes('CORS')) {
+        notification.error({
+          message: 'CORS Error',
+          description: 'Backend server needs to allow requests from this domain. Please contact your administrator.'
+        })
+      } else if (errorMessage.includes('Failed to fetch')) {
+        notification.error({
+          message: 'Network Error',
+          description: 'Cannot connect to the backend server. Please check if the server is running and accessible.'
+        })
+      } else {
+        notification.error({
+          message: 'Generation Error',
+          description: errorMessage || 'Failed to generate slides'
+        })
+      }
+    } finally {
+      setIsStreaming(false)
+      formAbortControllerRef.current = null
+    }
+  }
 
+  const handleStreamResponse = async (response: Response, params: SlideGenerationParams) => {
+    const reader = response.body?.getReader()
+    if (!reader) {
+      throw new Error('Failed to get response reader')
+    }
+
+    const decoder = new TextDecoder('utf-8')
+    let buffer = ''
+    let slideCount = 0
+
+    console.log('Starting to read stream...')
+
+    try {
       while (true) {
         const { done, value } = await reader.read()
         if (done) {
@@ -249,85 +279,69 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
 
           console.log('Parsed event:', { id, eventType, data })
 
-          if (eventType === 'slide-content' && data) {
+          // Handle slide-generated events
+          if (eventType === 'slide-generated' && data) {
             try {
-              const parsed = JSON.parse(data)
-              console.log('Slide content received:', parsed)
-              appendWordToSlide(parsed.slideId, parsed.slideType, parsed.content)
+              const parsed: TypedSlideData = JSON.parse(data)
+              console.log('Slide generated:', parsed)
 
-              // Update progress based on slide completion
+              // Add to stream slides
+              setStreamSlides((prev) => [...prev, parsed])
+              slideCount++
+
+              // Update progress
               const expectedSlides = params?.slideCount || 6
-              const progressPercent = (parseInt(parsed.slideId) / expectedSlides) * 100
+              const currentSlideNumber = id ? parseInt(id) : slideCount
+              const progressPercent = (currentSlideNumber / expectedSlides) * 100
               setProgress(Math.min(progressPercent, 100))
+
+              // Update current slide
+              setCurrentSlide(currentSlideNumber)
             } catch (err) {
-              console.error('Invalid JSON:', data, err)
+              console.error('Invalid JSON for slide-generated:', data, err)
             }
-          } else if (eventType === 'complete') {
+          } else if (eventType === 'complete' || eventType === 'end') {
             console.log('Generation complete event received')
             setProgress(100)
             setIsStreaming(false)
             notification.success({
               message: 'Generation Complete',
-              description: 'All slides have been generated successfully!'
+              description: `All ${slideCount} slides have been generated successfully!`
             })
-            break
+            return // Exit the function
           } else if (eventType === 'error') {
             console.error('Server error:', data)
             throw new Error(data || 'Server error occurred')
           }
         }
       }
-    } catch (error: unknown) {
-      console.error('Streaming error details:', error)
 
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-      const errorName = error instanceof Error ? error.name : ''
-
-      if (errorName === 'AbortError') {
-        notification.info({
-          message: 'Generation Stopped',
-          description: 'Slide generation has been stopped by user'
-        })
-      } else if (errorMessage.includes('CORS')) {
-        notification.error({
-          message: 'CORS Error',
-          description: 'Backend server needs to allow requests from this domain. Please contact your administrator.'
-        })
-      } else if (errorMessage.includes('Failed to fetch')) {
-        notification.error({
-          message: 'Network Error',
-          description: 'Cannot connect to the backend server. Please check if the server is running and accessible.'
-        })
-      } else {
-        notification.error({
-          message: 'Generation Error',
-          description: errorMessage || 'Failed to generate slides'
-        })
-      }
-    } finally {
+      // If we reach here without explicit completion event
+      setProgress(100)
       setIsStreaming(false)
-      abortControllerRef.current = null
-      streamReaderRef.current = null
+      notification.success({
+        message: 'Generation Complete',
+        description: `Generated ${slideCount} slides successfully!`
+      })
+    } finally {
+      reader.releaseLock()
     }
   }
 
-  const handleFormSubmit = (params: SlideGenerationParams) => {
-    setGenerationParams(params)
-    startStreaming(params)
-  }
-
-  const startDemoGeneration = () => {
-    setGenerationParams(null)
-    startStreaming()
-  }
-
   const stopStreaming = () => {
+    // Stop the main streaming
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
     }
     if (streamReaderRef.current) {
       streamReaderRef.current.cancel()
     }
+
+    // Stop the form submission streaming
+    if (formAbortControllerRef.current) {
+      formAbortControllerRef.current.abort()
+    }
+
     setIsStreaming(false)
   }
 
@@ -477,60 +491,17 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
       }
+      if (formAbortControllerRef.current) {
+        formAbortControllerRef.current.abort()
+      }
     }
   }, [])
 
+  if (isLoading) return <div>Loading lessons...</div>
+  if (error) return <div>Error: {error.message}</div>
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
-      {/* Floating Debug Info - Always visible in development */}
-      {process.env.NODE_ENV === 'development' && (
-        <DebugInfo
-          isDemoMode={isDemoMode}
-          generationParams={generationParams}
-          initialTopic={initialTopic}
-          enhancedSlideMap={enhancedSlideMap}
-          useLayoutAssignment={useLayoutAssignment}
-          selectedTheme={selectedTheme}
-        />
-      )}
-
-      {/* Mode Switcher */}
-      <Card style={{ marginBottom: 24 }}>
-        <Space direction='vertical' style={{ width: '100%' }}>
-          <Space align='center'>
-            <Text strong>Mode:</Text>
-            <Switch
-              checked={!isDemoMode}
-              onChange={(checked) => setIsDemoMode(!checked)}
-              checkedChildren='Production'
-              unCheckedChildren='Demo'
-              disabled={isStreaming}
-            />
-            <Text type='secondary'>
-              {isDemoMode
-                ? 'Demo mode - uses hardcoded demo data'
-                : 'Production mode - ready for backend API integration'}
-            </Text>
-          </Space>
-
-          {initialTopic && (
-            <div
-              style={{
-                backgroundColor: '#e6f7ff',
-                padding: '8px 12px',
-                borderRadius: '6px',
-                border: '1px solid #91d5ff'
-              }}
-            >
-              <Text>
-                <strong>Topic from URL:</strong> "{initialTopic}"
-                <Text type='secondary'> - Form has been pre-filled and switched to Production mode</Text>
-              </Text>
-            </div>
-          )}
-        </Space>
-      </Card>
-
       {/* Layout & Theme Configuration */}
       <Card title='Layout & Theme Settings' style={{ marginBottom: 24 }}>
         <Space direction='vertical' style={{ width: '100%' }}>
@@ -589,78 +560,151 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
 
       <Tabs defaultActiveKey='generator' type='card'>
         <TabPane tab='Slide Generator' key='generator'>
-          {isDemoMode ? (
-            <Card title='AI Slide Generator (Demo)' style={{ marginBottom: 24 }}>
-              <Space direction='vertical' style={{ width: '100%' }} size='large'>
-                <div
-                  style={{
-                    backgroundColor: '#e6f7ff',
-                    padding: '12px',
-                    borderRadius: '6px',
-                    border: '1px solid #91d5ff'
-                  }}
-                >
-                  <Typography.Text>
-                    <strong>Demo Mode:</strong> This will generate sample slides about "Spring AI Framework" using the
-                    streaming API. No topic input needed - the backend provides demo content.
-                  </Typography.Text>
-                </div>
-
-                <div>
-                  <Space>
-                    {!isStreaming ? (
-                      <Button
-                        type='primary'
-                        icon={<PlayCircleOutlined />}
-                        onClick={startDemoGeneration}
-                        size='large'
-                        disabled={!getAuthToken()}
-                      >
-                        Start Demo Generation
-                      </Button>
-                    ) : (
-                      <Button danger icon={<StopOutlined />} onClick={stopStreaming} size='large'>
-                        Stop Generation
-                      </Button>
-                    )}
-
-                    <Button icon={<SaveOutlined />} onClick={saveSlides} disabled={Object.keys(slideMap).length === 0}>
-                      Save Slides
-                    </Button>
-
-                    <Button
-                      icon={<ClearOutlined />}
-                      onClick={clearSlides}
-                      disabled={Object.keys(slideMap).length === 0}
+          <SlideGeneratorForm
+            onGenerate={handleFormSubmit}
+            loading={isStreaming}
+            disabled={isStreaming}
+            initialTopic={initialTopic}
+            lessons={lessons ?? []}
+          />
+        </TabPane>
+        {/* Add new tab for Reveal.js presentation */}
+        {/* Update the TabPane section in StreamingSlideGeneratorV2.tsx */}
+        <TabPane tab={`Reveal.js Presentation (${streamSlides.length})`} key='reveal-presentation'>
+          {streamSlides.length > 0 ? (
+            <Card
+              title={`Generated Presentation (${streamSlides.length} slides)`}
+              extra={
+                <Space>
+                  <Button type='primary' onClick={() => setShowRevealPresentation(!showRevealPresentation)}>
+                    {showRevealPresentation ? 'Hide' : 'Show'} Presentation
+                  </Button>
+                  <Button icon={<SaveOutlined />} onClick={saveSlides} type='primary'>
+                    Save Presentation
+                  </Button>
+                  <Button icon={<ClearOutlined />} onClick={() => setStreamSlides([])}>
+                    Clear
+                  </Button>
+                </Space>
+              }
+              bodyStyle={{ padding: 0 }}
+            >
+              {showRevealPresentation ? (
+                <>
+                  {!isFullscreen ? (
+                    <div
+                      style={{
+                        height: '600px',
+                        border: '1px solid #d9d9d9',
+                        borderRadius: '6px',
+                        overflow: 'hidden',
+                        position: 'relative'
+                      }}
                     >
-                      Clear
-                    </Button>
-                  </Space>
-                </div>
+                      <RevealPresentation slides={streamSlides} height='600px' size='medium' />
+                      <Button
+                        style={{
+                          position: 'absolute',
+                          top: '10px',
+                          right: '10px',
+                          zIndex: 1000,
+                          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                          border: '1px solid #d9d9d9'
+                        }}
+                        onClick={toggleFullscreen}
+                        size='small'
+                        type='default'
+                      >
+                        🔍 Fullscreen
+                      </Button>
+                    </div>
+                  ) : (
+                    <Modal
+                      title='Presentation - Fullscreen Mode'
+                      open={isFullscreen}
+                      onCancel={toggleFullscreen}
+                      footer={null}
+                      width='95vw'
+                      style={{ top: 20 }}
+                      bodyStyle={{ height: '85vh', padding: 0 }}
+                      destroyOnClose={false}
+                    >
+                      <RevealPresentation slides={streamSlides} height='85vh' size='large' />
+                    </Modal>
+                  )}
+                </>
+              ) : (
+                <div style={{ padding: '20px', textAlign: 'center' }}>
+                  <Button type='primary' size='large' onClick={() => setShowRevealPresentation(true)}>
+                    Start Presentation
+                  </Button>
 
-                {/* Progress */}
-                {isStreaming && (
-                  <div>
-                    <Text strong>Generation Progress:</Text>
-                    <Progress
-                      percent={Math.round(progress)}
-                      status={isStreaming ? 'active' : 'success'}
-                      format={() => `${Object.keys(slideMap).length} slides generated`}
-                    />
-                    <Text type='secondary'>
-                      Current slide: {currentSlide} | Total words: {totalWords}
-                    </Text>
+                  {/* Enhanced Preview of slides */}
+                  <div style={{ marginTop: '20px', textAlign: 'left' }}>
+                    <h4>Slide Preview:</h4>
+                    <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                      {streamSlides.map((slide, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            padding: '12px',
+                            margin: '8px 0',
+                            border: '1px solid #e8e8e8',
+                            borderRadius: '6px',
+                            backgroundColor: '#fafafa'
+                          }}
+                        >
+                          <div style={{ marginBottom: '8px' }}>
+                            <strong>
+                              Slide {index + 1} ({slide.type}):
+                            </strong>{' '}
+                            {slide.title}
+                          </div>
+
+                          {/* Show preview content based on type */}
+                          {slide.type === 'content' && (
+                            <div style={{ fontSize: '12px', color: '#666', lineHeight: '1.4' }}>
+                              {slide.data.body.substring(0, 150)}
+                              {slide.data.body.length > 150 ? '...' : ''}
+                            </div>
+                          )}
+
+                          {slide.type === 'list' && (
+                            <div style={{ fontSize: '12px', color: '#666' }}>
+                              <div>Items: {slide.data.items.length}</div>
+                              <div>
+                                • {slide.data.items[0]?.substring(0, 100)}
+                                {slide.data.items[0]?.length > 100 ? '...' : ''}
+                              </div>
+                              {slide.data.items.length > 1 && <div>• ...</div>}
+                            </div>
+                          )}
+
+                          {slide.type === 'compare' && (
+                            <div style={{ fontSize: '12px', color: '#666' }}>
+                              <div>
+                                {slide.data.left_header} vs {slide.data.right_header}
+                              </div>
+                              <div>
+                                {slide.data.left_points.length} vs {slide.data.right_points.length} points
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                )}
-              </Space>
+                </div>
+              )}
             </Card>
           ) : (
-            <SlideGeneratorForm
-              onGenerate={handleFormSubmit}
-              loading={isStreaming}
-              disabled={isStreaming}
-              initialTopic={initialTopic}
-            />
+            <Card>
+              <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                <Text type='secondary'>
+                  No slides generated yet. Generate slides to see the Reveal.js presentation.
+                </Text>
+              </div>
+            </Card>
           )}
         </TabPane>
 
@@ -690,7 +734,6 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
             </Card>
           )}
         </TabPane>
-
         <TabPane tab={`Layout View (${Object.keys(enhancedSlideMap).length})`} key='layout-view'>
           {/* Enhanced Slides with Layout Information */}
           {Object.keys(enhancedSlideMap).length > 0 ? (

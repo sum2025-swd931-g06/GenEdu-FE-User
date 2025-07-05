@@ -1,0 +1,259 @@
+/* src/components/RevealSlides/RevealSlides.css */
+
+/* Container Styles - Make it fit within the parent */
+.reveal-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Override Reveal.js default styles to fit in container */
+.reveal-container .reveal {
+  height: 100% !important;
+  font-family: inherit !important;
+}
+
+.reveal-container .reveal .slides {
+  height: 100% !important;
+}
+
+.reveal-container .reveal .slides > section {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 20px !important;
+  box-sizing: border-box !important;
+}
+
+/* Welcome Slide Styles */
+.reveal-container .welcome-slide {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  text-align: center;
+}
+
+.reveal-container .welcome-slide .slide-title {
+  font-size: 2.5rem !important; /* Reduced from 3.5em */
+  margin-bottom: 0.5em;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  line-height: 1.2 !important;
+}
+
+.reveal-container .welcome-slide .slide-subtitle {
+  font-size: 1.4rem !important; /* Reduced from 1.8em */
+  font-weight: 300;
+  opacity: 0.9;
+}
+
+/* Content Slide Styles */
+.reveal-container .content-slide .slide-title {
+  color: #2c3e50;
+  font-size: 2rem !important; /* Reduced from 2.5em */
+  margin-bottom: 0.8em;
+  border-bottom: 3px solid #3498db;
+  padding-bottom: 0.3em;
+  text-align: center;
+  line-height: 1.2 !important;
+}
+
+.reveal-container .content-slide .slide-body {
+  font-size: 1.1rem !important; /* Reduced from 1.4em */
+  line-height: 1.5 !important;
+  text-align: left;
+  color: #34495e;
+  max-width: 90%;
+  overflow-y: auto;
+  max-height: 70%;
+}
+
+.reveal-container .content-slide .slide-body p {
+  margin-bottom: 0.8em;
+}
+
+/* List Slide Styles */
+.reveal-container .list-slide .slide-title {
+  color: #27ae60;
+  font-size: 2rem !important; /* Reduced from 2.5em */
+  margin-bottom: 0.8em;
+  text-align: center;
+  line-height: 1.2 !important;
+}
+
+.reveal-container .list-slide .slide-list {
+  font-size: 1.1rem !important; /* Reduced from 1.3em */
+  line-height: 1.6 !important;
+  text-align: left;
+  max-width: 90%;
+  margin: 0 auto;
+  overflow-y: auto;
+  max-height: 70%;
+}
+
+.reveal-container .list-slide .slide-list li {
+  margin-bottom: 0.6em;
+  padding-left: 1.5em;
+  position: relative;
+}
+
+.reveal-container .list-slide .slide-list li::before {
+  content: '▶';
+  color: #27ae60;
+  font-size: 0.8em;
+  position: absolute;
+  left: 0;
+  top: 0.1em;
+}
+
+/* Compare Slide Styles */
+.reveal-container .compare-slide .slide-title {
+  color: #e74c3c;
+  font-size: 1.8rem !important; /* Reduced from 2.2em */
+  margin-bottom: 0.8em;
+  text-align: center;
+  line-height: 1.2 !important;
+}
+
+.reveal-container .comparison-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5em;
+  max-width: 90%;
+  margin: 0 auto;
+  max-height: 70%;
+  overflow-y: auto;
+}
+
+.reveal-container .comparison-left,
+.reveal-container .comparison-right {
+  flex: 1;
+  padding: 1em;
+  background: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  font-size: 0.9rem !important;
+}
+
+.reveal-container .comparison-left h3,
+.reveal-container .comparison-right h3 {
+  color: #2c3e50;
+  font-size: 1.2rem !important; /* Reduced from 1.5em */
+  margin-bottom: 0.8em;
+  text-align: center;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 0.5em;
+}
+
+.reveal-container .comparison-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem !important; /* Reduced from 2em */
+  font-weight: bold;
+  color: #e74c3c;
+  background: #fff;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  flex-shrink: 0;
+}
+
+/* Thanks Slide Styles */
+.reveal-container .thanks-slide {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  text-align: center;
+}
+
+.reveal-container .thanks-slide .slide-title {
+  font-size: 3rem !important; /* Reduced from 4em */
+  margin-bottom: 0.5em;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  line-height: 1.2 !important;
+}
+
+.reveal-container .thanks-slide .slide-message {
+  font-size: 1.6rem !important; /* Reduced from 2em */
+  font-weight: 300;
+  opacity: 0.9;
+}
+
+/* Fragment animations - scoped */
+.reveal-container .reveal .slides section .fragment {
+  opacity: 0.3;
+  transition: all 0.3s ease;
+}
+
+.reveal-container .reveal .slides section .fragment.visible {
+  opacity: 1;
+}
+
+/* Navigation styling - scoped */
+.reveal-container .reveal .controls {
+  color: #3498db;
+}
+
+.reveal-container .reveal .progress {
+  color: #3498db;
+}
+
+/* Hide some Reveal.js elements that might interfere */
+.reveal-container .reveal .controls {
+  display: block !important;
+  bottom: 20px !important;
+}
+
+.reveal-container .reveal .progress {
+  display: block !important;
+  bottom: 0 !important;
+}
+
+/* Responsive design for smaller containers */
+@media (max-width: 768px) {
+  .reveal-container .comparison-container {
+    flex-direction: column;
+    gap: 1em;
+  }
+  
+  .reveal-container .comparison-divider {
+    transform: rotate(90deg);
+    margin: 0.5em 0;
+  }
+  
+  .reveal-container .welcome-slide .slide-title,
+  .reveal-container .thanks-slide .slide-title {
+    font-size: 2rem !important;
+  }
+  
+  .reveal-container .content-slide .slide-title,
+  .reveal-container .list-slide .slide-title,
+  .reveal-container .compare-slide .slide-title {
+    font-size: 1.6rem !important;
+  }
+  
+  .reveal-container .content-slide .slide-body,
+  .reveal-container .list-slide .slide-list {
+    font-size: 1rem !important;
+  }
+}
+
+/* Extra small containers */
+.reveal-container[data-size="small"] .welcome-slide .slide-title,
+.reveal-container[data-size="small"] .thanks-slide .slide-title {
+  font-size: 1.8rem !important;
+}
+
+.reveal-container[data-size="small"] .content-slide .slide-title,
+.reveal-container[data-size="small"] .list-slide .slide-title,
+.reveal-container[data-size="small"] .compare-slide .slide-title {
+  font-size: 1.4rem !important;
+}
+
+.reveal-container[data-size="small"] .content-slide .slide-body,
+.reveal-container[data-size="small"] .list-slide .slide-list {
+  font-size: 0.95rem !important;
+}

@@ -17,6 +17,7 @@ import UserProfile from './pages/UserProfile'
 import VideoPlayer from './pages/VideoPlayer'
 import path from './constants/path'
 import SavedSlidesManager from './components/SavedSlides/SavedSlidesManager'
+import { useTokenManager } from './hooks/useTokenManager'
 
 function App() {
   const handleOnEvent = async (event: string, error: AuthClientError | undefined) => {
@@ -37,6 +38,7 @@ function App() {
     <ThemeProvider>
       <KeycloakProviderWithInit onEvent={handleOnEvent}>
         <AuthProvider>
+          <TokenManagerProvider />
           <AppRoutes />
         </AuthProvider>
       </KeycloakProviderWithInit>
@@ -139,6 +141,11 @@ const AppRoutes: React.FC = () => {
       </Routes>
     </BrowserRouter>
   )
+}
+
+const TokenManagerProvider: React.FC = () => {
+  useTokenManager() // Initialize token management
+  return null
 }
 
 export default App
