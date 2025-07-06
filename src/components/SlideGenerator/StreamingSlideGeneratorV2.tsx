@@ -208,7 +208,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
       return
     }
 
-    handleFileUpload(projectId)
+    // handleFileUpload(projectId)
 
     try {
       setIsStreaming(true)
