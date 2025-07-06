@@ -161,7 +161,7 @@ const Header: React.FC = () => {
             <Button
               type='primary'
               icon={<PlusOutlined />}
-              onClick={() => navigate('/create-project')}
+              onClick={() => navigate(path.slideGeneratorDemo)}
               className='hidden-mobile'
             >
               New Project

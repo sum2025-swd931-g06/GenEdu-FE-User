@@ -1,5 +1,5 @@
 import { BookOutlined, NumberOutlined } from '@ant-design/icons'
-import { Button, Card, Col, Divider, Form, Input, InputNumber, Row, Select, Space, Switch, Typography } from 'antd'
+import { Button, Card, Col, Divider, Form, Input, InputNumber, Row, Select, Space, Typography } from 'antd'
 import React, { useEffect } from 'react'
 import { Lesson } from '../../types/lesson.type'
 
@@ -194,19 +194,6 @@ const SlideGeneratorForm: React.FC<SlideGeneratorFormProps> = ({
           </Space>
         </Form.Item>
       </Form>
-
-      {/* Preview Section */}
-      <Divider orientation='left'>
-        <Text type='secondary'>Preview</Text>
-      </Divider>
-
-      <Card size='small' style={{ backgroundColor: '#fafafa' }}>
-        <Text type='secondary'>
-          <strong>Ready for API Integration:</strong> This form collects all necessary parameters for slide generation.
-          When your backend team updates the API, simply pass the form data to your streaming endpoint with the topic,
-          slideCount, difficulty, and other parameters.
-        </Text>
-      </Card>
     </Card>
   )
 }

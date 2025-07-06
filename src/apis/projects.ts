@@ -1,10 +1,7 @@
 import axios from 'axios'
-import type { UserData, Project, ProjectDetail } from '../types/auth.type'
-
-const api = axios.create({
-  baseURL: '/api',
-  timeout: 10000
-})
+import { UserData } from '../types/auth.type'
+import { Project, ProjectDetail, ProjectResponseDTO } from '../types/project.type'
+import api from './api.config'
 
 // User API
 export const userAPI = {
@@ -12,9 +9,10 @@ export const userAPI = {
 
   getProjects: (): Promise<Project[]> => api.get('/user/projects').then((res) => res.data)
 }
-
 // Project API
 export const projectAPI = {
+  getAllProjectOfUser: (): Promise<ProjectResponseDTO[]> => api.get('/projects').then((res) => res.data),
+
   getById: (id: string): Promise<ProjectDetail> => api.get(`/projects/${id}`).then((res) => res.data),
 
   create: (projectData: Partial<Project>): Promise<Project> =>

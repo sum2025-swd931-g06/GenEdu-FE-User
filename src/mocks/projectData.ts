@@ -1,70 +1,84 @@
-import { AudioProject, Project, ProjectDetail, UserData } from '../types/auth.type'
+import { UserData } from '../types/auth.type'
+import { Project, ProjectDetail, ProjectResponseDTO } from '../types/project.type'
+
+// Generate consistent UUIDs for mock data
+const generateConsistentUUID = (seed: string): string => {
+  // For demo purposes, create predictable UUIDs based on seed
+  const hash = seed.split('').reduce((a, b) => {
+    a = (a << 5) - a + b.charCodeAt(0)
+    return a & a
+  }, 0)
+
+  const hex = Math.abs(hash).toString(16).padStart(8, '0')
+  return `${hex.slice(0, 8)}-${hex.slice(0, 4)}-4${hex.slice(1, 4)}-a${hex.slice(1, 4)}-${hex.slice(0, 12)}`
+}
+
+const MOCK_USER_ID = generateConsistentUUID('john-doe-user')
 
 export const mockUser: UserData = {
-  id: '1',
+  id: MOCK_USER_ID,
   name: 'John Doe',
   email: 'john.doe@example.com',
   idNumber: 'ID123456789'
 }
 
-export const mockAudioProjects: AudioProject[] = [
-  {
-    id: 'audio-1',
-    title: 'Introduction Speech',
-    status: 'COMPLETED',
-    creationTime: Date.now() - 86400000, // 1 day ago
-    durationSeconds: 180,
-    textContent:
-      'Welcome to our presentation about artificial intelligence and its applications in modern education...',
-    audioUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
-    voiceType: 'Professional Female'
-  },
-  {
-    id: 'audio-2',
-    title: 'Conclusion Speech',
-    status: 'PROCESSING',
-    creationTime: Date.now() - 3600000, // 1 hour ago
-    durationSeconds: 120,
-    textContent: 'In conclusion, AI technology will continue to revolutionize how we learn and teach...',
-    voiceType: 'Professional Male'
-  }
-]
-
 export const mockProjects: Project[] = [
   {
-    id: '1',
+    id: generateConsistentUUID('project-1'),
+    userId: MOCK_USER_ID,
+    lessonId: 101, // "What is Programming?" lesson
     title: 'AI in Education Presentation',
+    customInstructions: 'Focus on practical applications and real-world examples of AI in educational settings.',
     status: 'COMPLETED',
-    creationTime: Date.now() - 172800000, // 2 days ago
     slideNum: 8,
-    audioProject: mockAudioProjects[0]
+    templateId: 1,
+    lessonPlanFileId: 1001,
+    createdOn: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+    lastModifiedOn: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+    deleted: false
   },
   {
-    id: '2',
+    id: generateConsistentUUID('project-2'),
+    userId: MOCK_USER_ID,
+    lessonId: 201, // "Understanding Variables" lesson
     title: 'Climate Change Awareness',
+    customInstructions: 'Include interactive elements and visual data representations.',
     status: 'IN_PROGRESS',
-    creationTime: Date.now() - 86400000, // 1 day ago
     slideNum: 5,
-    audioProject: mockAudioProjects[1]
+    templateId: 2,
+    lessonPlanFileId: 1002,
+    createdOn: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+    lastModifiedOn: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+    deleted: false
   },
   {
-    id: '3',
+    id: generateConsistentUUID('project-3'),
+    userId: MOCK_USER_ID,
+    lessonId: 301, // "Conditional Statements" lesson
     title: 'Space Exploration History',
     status: 'DRAFT',
-    creationTime: Date.now() - 3600000, // 1 hour ago
-    slideNum: 3
+    slideNum: 3,
+    templateId: 1,
+    createdOn: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+    lastModifiedOn: new Date(Date.now() - 3600000).toISOString() // 1 hour ago
   },
   {
-    id: '4',
+    id: generateConsistentUUID('project-4'),
+    userId: MOCK_USER_ID,
+    lessonId: 401, // "Introduction to Functions" lesson
     title: 'Renewable Energy Solutions',
+    customInstructions: 'Emphasize sustainability and economic benefits.',
     status: 'COMPLETED',
-    creationTime: Date.now() - 259200000, // 3 days ago
-    slideNum: 12
+    slideNum: 12,
+    templateId: 3,
+    lessonPlanFileId: 1003,
+    createdOn: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
+    lastModifiedOn: new Date(Date.now() - 172800000).toISOString() // 2 days ago
   }
 ]
 
 export const mockProjectDetails: { [key: string]: ProjectDetail } = {
-  '1': {
+  [generateConsistentUUID('project-1')]: {
     ...mockProjects[0],
     slides: [
       {
@@ -120,7 +134,7 @@ export const mockProjectDetails: { [key: string]: ProjectDetail } = {
       }
     ]
   },
-  '2': {
+  [generateConsistentUUID('project-2')]: {
     ...mockProjects[1],
     slides: [
       {
@@ -157,4 +171,72 @@ export const mockProjectDetails: { [key: string]: ProjectDetail } = {
       }
     ]
   }
+}
+
+// Helper functions for project creation and DTO conversion
+export const createProjectFromRequest = (
+  request: { lessonId: number; title: string; customInstructions?: string; slideNumber?: number },
+  userId: string = MOCK_USER_ID
+): Project => {
+  const projectId = generateConsistentUUID(`project-${Date.now()}-${request.title}`)
+  const now = new Date()
+
+  return {
+    id: projectId,
+    userId,
+    lessonId: request.lessonId,
+    title: request.title,
+    customInstructions: request.customInstructions,
+    status: 'DRAFT',
+    slideNum: request.slideNumber || 10, // Default to 10 as per backend
+    templateId: Math.floor(Math.random() * 3) + 1, // Random template ID 1-3
+    createdOn: now.toISOString(),
+    lastModifiedOn: now.toISOString(),
+    deleted: false
+  }
+}
+
+export const projectToResponseDTO = (project: Project): ProjectResponseDTO => ({
+  id: project.id,
+  userId: project.userId,
+  lessonId: project.lessonId,
+  title: project.title,
+  lessonPlanFileId: project.lessonPlanFileId,
+  customInstructions: project.customInstructions,
+  status: project.status,
+  slideNum: project.slideNum,
+  templateId: project.templateId,
+  createdOn: project.createdOn,
+  lastModifiedOn: project.lastModifiedOn,
+  deleted: project.deleted
+})
+
+// Utility functions for handling file URLs
+export const getFileUrlFromId = (fileId?: number): string | undefined => {
+  if (!fileId) return undefined
+  return `http://localhost:8222/api/v1/files/${fileId}`
+}
+
+// Convert backend project to frontend-compatible format
+export const normalizeProject = (backendProject: ProjectResponseDTO): Project => ({
+  id: backendProject.id,
+  userId: backendProject.userId,
+  lessonId: backendProject.lessonId,
+  title: backendProject.title,
+  lessonPlanFileId: backendProject.lessonPlanFileId,
+  customInstructions: backendProject.customInstructions,
+  status: backendProject.status,
+  slideNum: backendProject.slideNum,
+  templateId: backendProject.templateId,
+  createdOn: backendProject.createdOn,
+  lastModifiedOn: backendProject.lastModifiedOn,
+  deleted: backendProject.deleted
+})
+
+// Export the project IDs for easy reference
+export const mockProjectIds = {
+  project1: generateConsistentUUID('project-1'),
+  project2: generateConsistentUUID('project-2'),
+  project3: generateConsistentUUID('project-3'),
+  project4: generateConsistentUUID('project-4')
 }

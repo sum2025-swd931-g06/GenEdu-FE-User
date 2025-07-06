@@ -15,8 +15,7 @@ import {
   EyeOutlined
 } from '@ant-design/icons'
 import ReactPlayer from 'react-player'
-import { useProjects } from '../../hooks/useProjects'
-import type { Project } from '../../types/auth.type'
+import { Project } from '../../types/project.type'
 
 const { Title, Text } = Typography
 
@@ -31,7 +30,7 @@ const VideoPlayerPage: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>()
   const navigate = useNavigate()
   const playerRef = useRef<ReactPlayer>(null)
-  const { projects, loading } = useProjects()
+  // const { projects, loading } = useProjects()
 
   const [project, setProject] = useState<Project | null>(null)
   const [playing, setPlaying] = useState(false)

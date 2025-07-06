@@ -1,17 +1,29 @@
-import { ClearOutlined, SaveOutlined, StopOutlined } from '@ant-design/icons'
-import { Button, Card, Form, Input, Modal, notification, Progress, Select, Space, Switch, Tabs, Typography } from 'antd'
+import { ClearOutlined, SaveOutlined, StopOutlined, UploadOutlined } from '@ant-design/icons'
+import {
+  Button,
+  Card,
+  Form,
+  Input,
+  Modal,
+  notification,
+  Progress,
+  Space,
+  Tabs,
+  Typography,
+  Upload,
+  UploadProps
+} from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import api from '../../apis/api.config'
 import { useTokenManager } from '../../hooks/useTokenManager'
-import { predefinedLayouts } from '../../layouts/predefinedLayouts'
 import useLessons from '../../queries/useLesson'
 import { SavedSlidesService as DraftProjectService } from '../../services/savedSlidesService'
-import { SlideLayoutAssignmentService } from '../../services/slideLayoutAssignment'
-import { predefinedThemes } from '../../themes/predefinedThemes'
 import { GeneratedSlide } from '../../types/slide.type'
 import { TypedSlideData } from '../../types/slideStream.type'
 import RevealPresentation from '../RevealSlides/RevealPresentation'
 import SlideGeneratorForm, { SlideGenerationParams } from './SlideGeneratorForm'
+import { ProjectRequestDTO, ProjectResponseDTO } from '../../types/project.type'
 
 const { Text } = Typography
 const { TabPane } = Tabs
@@ -22,12 +34,12 @@ interface SlideData {
   words: string[]
 }
 
-interface StreamingSlideGeneratorProps {
-  onSlidesGenerated?: (slides: GeneratedSlide[]) => void
-  projectId?: string
+type UploadFile = {
+  projectId: string
+  mediaFile: File
 }
 
-const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onSlidesGenerated, projectId }) => {
+const StreamingSlideGeneratorV2: React.FC = () => {
   const { getAuthToken } = useTokenManager()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -36,12 +48,14 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
   const [enhancedSlideMap, setEnhancedSlideMap] = useState<Record<string, GeneratedSlide>>({})
   const [progress, setProgress] = useState(0)
   const [currentSlide, setCurrentSlide] = useState(0)
-  const [totalWords, setTotalWords] = useState(0)
   const [generationParams, setGenerationParams] = useState<SlideGenerationParams | null>(null)
-  const [isDemoMode, setIsDemoMode] = useState(true)
   const [initialTopic, setInitialTopic] = useState<string>('')
-  const [selectedTheme, setSelectedTheme] = useState(predefinedThemes[0])
-  const [useLayoutAssignment, setUseLayoutAssignment] = useState(true)
+
+  // File upload states
+  const [file, setFile] = useState<UploadFile>()
+  const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [projectId, setProjectId] = useState<string | null>(null)
 
   // Save modal states
   const [saveModalVisible, setSaveModalVisible] = useState(false)
@@ -66,7 +80,6 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
     const topicFromUrl = searchParams.get('topic')
     if (topicFromUrl) {
       setInitialTopic(topicFromUrl)
-      setIsDemoMode(false) // Switch to production mode when topic is provided
 
       // Show notification that topic was auto-filled
       notification.info({
@@ -82,49 +95,77 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
   const streamReaderRef = useRef<ReadableStreamDefaultReader | null>(null)
   const formAbortControllerRef = useRef<AbortController | null>(null)
 
-  const appendWordToSlide = (slideId: string, slideType: string, word: string) => {
-    if (!word || word.trim() === '') return
+  const uploadProps: UploadProps = {
+    beforeUpload: (file) => {
+      setFile({ projectId: projectId || '', mediaFile: file })
+      return false
+    },
+    onRemove: () => {
+      setFile(undefined)
+    },
+    accept: '.md',
+    multiple: false,
+    maxCount: 1
+  }
 
-    setSlideMap((prev) => {
-      const updated = { ...prev }
-      if (!updated[slideId]) {
-        updated[slideId] = {
-          slideId,
-          slideType,
-          words: []
+  const handleFileUpload = async (projectId: string | null) => {
+    if (!file || !file.mediaFile) {
+      notification.warning({
+        message: 'No File Selected',
+        description: 'Please select a file to upload.'
+      })
+      return
+    }
+
+    if (!projectId) {
+      notification.error({
+        message: 'No Project ID',
+        description: 'Please generate slides first to create a project.'
+      })
+      return
+    }
+
+    setUploading(true)
+    setUploadProgress(0)
+
+    const formData = new FormData()
+    formData.append('projectId', projectId)
+    formData.append('mediaFile', file.mediaFile)
+
+    try {
+      const response = await api.put(`/projects/${projectId}/lesson-plans`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total !== undefined && progressEvent.total > 0) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            setUploadProgress(percentCompleted)
+          }
         }
+      })
+
+      if (response.status === 200) {
+        notification.success({
+          message: 'File Uploaded',
+          description: 'Your file has been uploaded successfully.'
+        })
+      } else {
+        notification.error({
+          message: 'Upload Failed',
+          description: 'There was an error uploading your file. Please try again.'
+        })
       }
-      updated[slideId].words.push(word)
-      return updated
-    })
-
-    // Create or update enhanced slide with layout assignment
-    setEnhancedSlideMap((prev) => {
-      const updated = { ...prev }
-      const currentSlide = prev[slideId]
-      const words = currentSlide ? [...currentSlide.words, word] : [word]
-
-      // Use layout assignment service to create enhanced slide
-      const topic = generationParams?.topic || initialTopic || 'General Topic'
-      const enhancedSlide = SlideLayoutAssignmentService.enhanceSlideWithLayout(
-        slideId,
-        slideType,
-        words,
-        topic,
-        generationParams
-      )
-
-      // Override theme if user has selected one
-      if (selectedTheme) {
-        enhancedSlide.theme = selectedTheme
-      }
-
-      updated[slideId] = enhancedSlide
-      return updated
-    })
-
-    setTotalWords((prev) => prev + 1)
-    setCurrentSlide(parseInt(slideId))
+    } catch (error) {
+      console.error('Error uploading file:', error)
+      notification.error({
+        message: 'Upload Error',
+        description: 'An error occurred while uploading your file. Please try again.'
+      })
+    } finally {
+      setUploading(false)
+      setUploadProgress(0)
+    }
   }
 
   const handleFormSubmit = async (params: SlideGenerationParams) => {
@@ -132,19 +173,47 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
 
     console.log(`data from form:`, params)
 
-    const mappedParams = {
-      lessonId: params.lesson?.lessonId || '',
+    const mappedParams: ProjectRequestDTO = {
+      lessonId: params.lesson?.lessonId || 0,
       title: params.topic || initialTopic || 'Generated Slides',
       customInstructions: params.description || `Auto-generated presentation about ${params.topic || initialTopic}`,
       slideNumber: params.slideCount || 6
     }
 
     try {
+      const response = await api.post<ProjectResponseDTO>('/projects', mappedParams)
+      if (response.status === 201) {
+        const projectData = response.data
+        setProjectId(projectData.id)
+        notification.success({
+          message: 'Project Created',
+          description: `Project "${projectData.title}" created successfully!`
+        })
+      }
+    } catch (error) {
+      console.error('Error creating project:', error)
+      notification.error({
+        message: 'Project Creation Failed',
+        description: 'Failed to create project. Please try again.'
+      })
+      return
+    }
+
+    if (!projectId) {
+      notification.error({
+        message: 'No Project ID',
+        description: 'Please generate slides first to create a project.'
+      })
+      return
+    }
+
+    handleFileUpload(projectId)
+
+    try {
       setIsStreaming(true)
       setStreamSlides([]) // Clear existing stream slides
       setProgress(0)
       setCurrentSlide(0)
-      setTotalWords(0)
 
       // Get auth token
       const token = getAuthToken()
@@ -380,11 +449,6 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
         generationParams || undefined
       )
 
-      // Also call the original callback if provided
-      if (onSlidesGenerated) {
-        onSlidesGenerated(slides)
-      }
-
       notification.success({
         message: 'Draft Project Saved Successfully!',
         description: (
@@ -423,68 +487,6 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
     }
   }
 
-  const clearSlides = () => {
-    setSlideMap({})
-    setEnhancedSlideMap({})
-    setProgress(0)
-    setCurrentSlide(0)
-    setTotalWords(0)
-    setGenerationParams(null)
-  }
-
-  const renderSlides = () => {
-    const sortedSlides = Object.values(slideMap).sort((a, b) => parseInt(a.slideId) - parseInt(b.slideId))
-
-    return sortedSlides.map((slide) => {
-      const enhancedSlide = enhancedSlideMap[slide.slideId]
-      const layoutInfo = enhancedSlide?.layout
-      const themeInfo = enhancedSlide?.theme
-
-      return (
-        <Card
-          key={slide.slideId}
-          title={
-            <Space>
-              <span>{`Slide ${slide.slideId} (${slide.slideType})`}</span>
-              {layoutInfo && <span style={{ fontSize: '12px', color: '#666' }}>Layout: {layoutInfo.name}</span>}
-              {themeInfo && <span style={{ fontSize: '12px', color: '#666' }}>Theme: {themeInfo.name}</span>}
-            </Space>
-          }
-          size='small'
-          style={{
-            marginBottom: 16,
-            border: parseInt(slide.slideId) === currentSlide ? '2px solid #1890ff' : undefined
-          }}
-          bodyStyle={{
-            fontFamily: 'monospace',
-            whiteSpace: 'pre-wrap',
-            fontSize: '14px',
-            lineHeight: '1.5'
-          }}
-          extra={
-            layoutInfo && (
-              <Space>
-                <span style={{ fontSize: '11px', color: '#999' }}>Category: {layoutInfo.category}</span>
-                {useLayoutAssignment && <span style={{ fontSize: '11px', color: '#52c41a' }}>Auto-assigned</span>}
-              </Space>
-            )
-          }
-        >
-          {slide.words.join(' ')}
-
-          {/* Show layout regions if available */}
-          {layoutInfo && layoutInfo.structure.regions.length > 0 && (
-            <div style={{ marginTop: '12px', padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-              <Text style={{ fontSize: '11px', color: '#666' }}>
-                Layout regions: {layoutInfo.structure.regions.map((r) => r.type).join(', ')}
-              </Text>
-            </div>
-          )}
-        </Card>
-      )
-    })
-  }
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -502,62 +504,6 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
-      {/* Layout & Theme Configuration */}
-      <Card title='Layout & Theme Settings' style={{ marginBottom: 24 }}>
-        <Space direction='vertical' style={{ width: '100%' }}>
-          <Space align='center' wrap>
-            <Text strong>Layout Assignment:</Text>
-            <Switch
-              checked={useLayoutAssignment}
-              onChange={setUseLayoutAssignment}
-              checkedChildren='Auto'
-              unCheckedChildren='Manual'
-              disabled={isStreaming}
-            />
-            <Text type='secondary'>
-              {useLayoutAssignment
-                ? 'Automatically assign layouts based on content type'
-                : 'Use default layout for all slides'}
-            </Text>
-          </Space>
-
-          <Space align='center' wrap>
-            <Text strong>Theme:</Text>
-            <Select
-              value={selectedTheme?.id}
-              onChange={(themeId) => {
-                const theme = predefinedThemes.find((t) => t.id === themeId)
-                if (theme) setSelectedTheme(theme)
-              }}
-              style={{ width: 200 }}
-              disabled={isStreaming}
-            >
-              {predefinedThemes.map((theme) => (
-                <Select.Option key={theme.id} value={theme.id}>
-                  {theme.name} ({theme.category})
-                </Select.Option>
-              ))}
-            </Select>
-            <Text type='secondary'>Selected: {selectedTheme?.name}</Text>
-          </Space>
-
-          <div
-            style={{
-              backgroundColor: '#f0f8ff',
-              padding: '8px 12px',
-              borderRadius: '6px',
-              border: '1px solid #d6f7ff'
-            }}
-          >
-            <Text style={{ fontSize: '12px' }}>
-              <strong>Layout Integration:</strong> Generated slides will be automatically assigned appropriate layouts (
-              {predefinedLayouts.length} available) and themes ({predefinedThemes.length} available) based on content
-              analysis.
-            </Text>
-          </div>
-        </Space>
-      </Card>
-
       <Tabs defaultActiveKey='generator' type='card'>
         <TabPane tab='Slide Generator' key='generator'>
           <SlideGeneratorForm
@@ -707,146 +653,68 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
             </Card>
           )}
         </TabPane>
-
-        <TabPane tab={`Live Preview (${Object.keys(slideMap).length})`} key='preview'>
-          {/* Live Slides Display */}
-          {Object.keys(slideMap).length > 0 ? (
-            <Card
-              title={`Live Slides Preview (${Object.keys(slideMap).length} slides)`}
-              extra={
-                <Space>
-                  <Button icon={<SaveOutlined />} onClick={saveSlides} type='primary'>
-                    Save Slides
-                  </Button>
-                  <Button icon={<ClearOutlined />} onClick={clearSlides}>
-                    Clear
-                  </Button>
-                </Space>
-              }
-            >
-              {renderSlides()}
-            </Card>
-          ) : (
-            <Card>
-              <div style={{ textAlign: 'center', padding: '48px 0' }}>
-                <Text type='secondary'>No slides generated yet. Start generation to see live preview.</Text>
-              </div>
-            </Card>
-          )}
-        </TabPane>
-        <TabPane tab={`Layout View (${Object.keys(enhancedSlideMap).length})`} key='layout-view'>
-          {/* Enhanced Slides with Layout Information */}
-          {Object.keys(enhancedSlideMap).length > 0 ? (
-            <Card
-              title={`Layout-Enhanced Slides (${Object.keys(enhancedSlideMap).length} slides)`}
-              extra={
-                <Space>
-                  <Button icon={<SaveOutlined />} onClick={saveSlides} type='primary'>
-                    Save Enhanced Slides
-                  </Button>
-                  <Button icon={<ClearOutlined />} onClick={clearSlides}>
-                    Clear
-                  </Button>
-                </Space>
-              }
-            >
-              {Object.values(enhancedSlideMap)
-                .sort((a, b) => parseInt(a.slideId) - parseInt(b.slideId))
-                .map((slide) => (
-                  <Card
-                    key={slide.slideId}
-                    title={
-                      <Space direction='vertical' size={0}>
-                        <span>{`Slide ${slide.slideId}: ${slide.title || slide.slideType}`}</span>
-                        <Space size={0}>
-                          <span style={{ fontSize: '12px', color: '#666' }}>
-                            Layout: {slide.layout.name} ({slide.layout.category})
-                          </span>
-                          {slide.theme && (
-                            <span style={{ fontSize: '12px', color: '#666', marginLeft: '16px' }}>
-                              Theme: {slide.theme.name}
-                            </span>
-                          )}
-                        </Space>
-                      </Space>
-                    }
-                    size='small'
-                    style={{
-                      marginBottom: 16,
-                      border: parseInt(slide.slideId) === currentSlide ? '2px solid #1890ff' : undefined
-                    }}
-                  >
-                    <Space direction='vertical' style={{ width: '100%' }}>
-                      {/* Slide Content */}
-                      <div
-                        style={{
-                          fontFamily: 'monospace',
-                          whiteSpace: 'pre-wrap',
-                          fontSize: '14px',
-                          lineHeight: '1.5',
-                          padding: '8px',
-                          backgroundColor: '#fafafa',
-                          borderRadius: '4px'
-                        }}
-                      >
-                        {slide.words.join(' ')}
-                      </div>
-
-                      {/* Layout Information */}
-                      <div style={{ padding: '8px', backgroundColor: '#f0f8ff', borderRadius: '4px' }}>
-                        <Text strong style={{ fontSize: '12px' }}>
-                          Layout Details:
-                        </Text>
-                        <div style={{ marginTop: '4px' }}>
-                          <Text style={{ fontSize: '11px', color: '#666' }}>
-                            Description: {slide.layout.description}
-                          </Text>
-                        </div>
-                        <div>
-                          <Text style={{ fontSize: '11px', color: '#666' }}>
-                            Regions: {slide.layout.structure.regions.map((r) => `${r.type} (${r.id})`).join(', ')}
-                          </Text>
-                        </div>
-                        {slide.layout.metadata.tags && (
-                          <div>
-                            <Text style={{ fontSize: '11px', color: '#666' }}>
-                              Tags: {slide.layout.metadata.tags.join(', ')}
-                            </Text>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Content Mapping */}
-                      {slide.content && slide.content.length > 0 && (
-                        <div style={{ padding: '8px', backgroundColor: '#f6fff6', borderRadius: '4px' }}>
-                          <Text strong style={{ fontSize: '12px' }}>
-                            Content Mapping:
-                          </Text>
-                          {slide.content.map((content) => (
-                            <div key={content.id} style={{ marginTop: '4px', marginLeft: '8px' }}>
-                              <Text style={{ fontSize: '11px' }}>
-                                <strong>{content.type}:</strong> {content.content.substring(0, 100)}
-                                {content.content.length > 100 ? '...' : ''}
-                              </Text>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </Space>
-                  </Card>
-                ))}
-            </Card>
-          ) : (
-            <Card>
-              <div style={{ textAlign: 'center', padding: '48px 0' }}>
-                <Text type='secondary'>
-                  No enhanced slides yet. Generate slides to see layout assignments and content mapping.
-                </Text>
-              </div>
-            </Card>
-          )}
-        </TabPane>
       </Tabs>
+
+      <Card title='Lesson Plan File Upload' style={{ marginBottom: 24 }}>
+        <Space direction='vertical' style={{ width: '100%' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <Text>Upload a lesson plan file (PDF, Word, PowerPoint, or Text) to enhance slide generation:</Text>
+          </div>
+
+          {projectId != null && (
+            <Space align='start' style={{ width: '100%' }}>
+              <Upload {...uploadProps}>
+                <Button icon={<UploadOutlined />} disabled={uploading || isStreaming}>
+                  Select File
+                </Button>
+              </Upload>
+
+              <Button
+                type='primary'
+                onClick={() => handleFileUpload(projectId)}
+                disabled={uploading || isStreaming || !projectId}
+                loading={uploading}
+              >
+                {uploading ? 'Uploading...' : 'Upload'}
+              </Button>
+            </Space>
+          )}
+
+          {/* Upload Progress */}
+          {uploading && <Progress percent={uploadProgress} status='active' format={() => 'Uploading...'} />}
+
+          {/* Project ID Status */}
+          <div
+            style={{
+              padding: '8px 12px',
+              backgroundColor: projectId ? '#f6ffed' : '#fff2e8',
+              border: `1px solid ${projectId ? '#b7eb8f' : '#ffbb96'}`,
+              borderRadius: '6px'
+            }}
+          >
+            <Text style={{ fontSize: '12px' }}>
+              <strong>Project Status:</strong>{' '}
+              {projectId ? `Project ID: ${projectId}` : 'No project created yet - generate slides first'}
+            </Text>
+          </div>
+
+          {/* File Upload Info */}
+          <div
+            style={{
+              padding: '8px 12px',
+              backgroundColor: '#f0f8ff',
+              border: '1px solid #d6f7ff',
+              borderRadius: '6px'
+            }}
+          >
+            <Text style={{ fontSize: '12px', color: '#666' }}>
+              <strong>Supported formats:</strong> Markdown (.md)
+              <br />
+              <strong>Max file size:</strong> 10MB
+            </Text>
+          </div>
+        </Space>
+      </Card>
 
       {/* Generation Progress (Fixed at bottom when streaming) */}
       {isStreaming && (
@@ -917,8 +785,6 @@ const StreamingSlideGeneratorV2: React.FC<StreamingSlideGeneratorProps> = ({ onS
               <br />• <strong>Slides:</strong> {Object.keys(enhancedSlideMap).length}
               <br />• <strong>Layouts:</strong>{' '}
               {[...new Set(Object.values(enhancedSlideMap).map((s) => s.layout.name))].join(', ')}
-              <br />• <strong>Theme:</strong> {selectedTheme?.name}
-              <br />• <strong>Total Words:</strong>{' '}
               {Object.values(enhancedSlideMap).reduce((total, slide) => total + slide.words.length, 0)}
             </Text>
           </div>

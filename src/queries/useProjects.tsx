@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { userAPI, projectAPI } from '../apis/projects'
-import type { Project } from '../types/auth.type'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { projectAPI, userAPI } from '../apis/projects'
+import { Project } from '../types/project.type'
 
 // Query keys
 export const queryKeys = {
@@ -29,6 +29,16 @@ export const useUserProjects = () => {
 }
 
 // Project queries
+
+export const useProjectsOfUser = () => {
+  return useQuery({
+    queryKey: queryKeys.user.projects,
+    queryFn: projectAPI.getAllProjectOfUser,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000 // 10 minutes
+  })
+}
+
 export const useProjectDetail = (id: string) => {
   return useQuery({
     queryKey: queryKeys.project.detail(id),

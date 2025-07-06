@@ -14,11 +14,9 @@ import {
   ProjectOutlined,
   BookOutlined
 } from '@ant-design/icons'
-import { useProject } from '../../hooks/useProjects'
-import type { ProjectDetail } from '../../types/auth.type'
-import { ProjectStatus, AudioProjectStatus } from '../../types/auth.type'
 import { DraftProjectService } from '../../services/savedSlidesService'
 import RevealSlideViewer, { RevealSlideViewerRef } from '../../components/SlideViewer'
+import { ProjectDetail, ProjectStatus } from '../../types/project.type'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -29,7 +27,7 @@ const ProjectDetailPage: React.FC = () => {
   const slideViewerRef = useRef<RevealSlideViewerRef>(null)
 
   // Use the dedicated useProject hook for loading project details
-  const { projectDetail: project, loading: projectLoading, error: projectError } = useProject(id)
+  // const { projectDetail: project, loading: projectLoading, error: projectError } = useProject(id)
 
   // State for handling draft projects (projects without audio)
   const [draftProject, setDraftProject] = useState<ProjectDetail | null>(null)
@@ -137,19 +135,6 @@ const ProjectDetailPage: React.FC = () => {
       case 'COMPLETED':
         return 'green'
       case 'IN_PROGRESS':
-        return 'blue'
-      case 'DRAFT':
-        return 'orange'
-      default:
-        return 'default'
-    }
-  }
-
-  const getAudioStatusColor = (status: AudioProjectStatus) => {
-    switch (status) {
-      case 'COMPLETED':
-        return 'green'
-      case 'PROCESSING':
         return 'blue'
       case 'DRAFT':
         return 'orange'

@@ -2,22 +2,22 @@ import type { AuthClientError } from '@react-keycloak/core'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import SavedSlidesManager from './components/SavedSlides/SavedSlidesManager'
+import { StreamingSlideGeneratorV2 } from './components/SlideGenerator'
+import SlideLayoutDemo from './components/SlideGenerator/SlideLayoutDemo'
+import path from './constants/path'
 import { AuthProvider } from './contexts/AuthContext'
 import ThemeProvider from './contexts/ThemeContext'
 import keycloak from './core/keycloak'
 import KeycloakProviderWithInit from './core/keycloak/KeycloakProviderWithInit'
+import { useTokenManager } from './hooks/useTokenManager'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Presentation from './pages/Presentation/Presentation'
 import ProjectDetail from './pages/ProjectDetail'
 import Register from './pages/Register'
-import SlideGeneratorDemo from './pages/SlideGenerator/SlideGeneratorDemo'
-import SlideLayoutDemo from './components/SlideGenerator/SlideLayoutDemo'
 import UserProfile from './pages/UserProfile'
 import VideoPlayer from './pages/VideoPlayer'
-import path from './constants/path'
-import SavedSlidesManager from './components/SavedSlides/SavedSlidesManager'
-import { useTokenManager } from './hooks/useTokenManager'
 
 function App() {
   const handleOnEvent = async (event: string, error: AuthClientError | undefined) => {
@@ -94,7 +94,7 @@ const AppRoutes: React.FC = () => {
           element={
             <Layout>
               <ProtectedRoute>
-                <SlideGeneratorDemo />
+                <StreamingSlideGeneratorV2 />
               </ProtectedRoute>
             </Layout>
           }
