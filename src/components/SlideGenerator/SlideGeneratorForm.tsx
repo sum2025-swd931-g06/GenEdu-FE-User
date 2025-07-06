@@ -27,6 +27,7 @@ interface SlideGeneratorFormProps {
   disabled?: boolean
   initialTopic?: string
   lessons: Lesson[]
+  buttonText?: string
 }
 
 const SlideGeneratorForm: React.FC<SlideGeneratorFormProps> = ({
@@ -34,7 +35,8 @@ const SlideGeneratorForm: React.FC<SlideGeneratorFormProps> = ({
   loading = false,
   disabled = false,
   initialTopic = '',
-  lessons = []
+  lessons = [],
+  buttonText = 'Generate Slides'
 }) => {
   const [form] = Form.useForm()
 
@@ -44,7 +46,6 @@ const SlideGeneratorForm: React.FC<SlideGeneratorFormProps> = ({
       form.setFieldsValue({ topic: initialTopic })
     }
   }, [initialTopic, form])
-
   const groupedLessons = lessons.reduce(
     (acc, lesson) => {
       const chapterId = lesson.chapterId
@@ -61,7 +62,17 @@ const SlideGeneratorForm: React.FC<SlideGeneratorFormProps> = ({
       acc[chapterId].lessons.push(lesson)
       return acc
     },
-    {} as Record<number, { chapter: any; lessons: Lesson[] }>
+    {} as Record<
+      number,
+      {
+        chapter: {
+          id: number
+          title: string
+          orderNumber: number
+        }
+        lessons: Lesson[]
+      }
+    >
   )
 
   const handleSubmit = (values: FormValues) => {
@@ -178,14 +189,11 @@ const SlideGeneratorForm: React.FC<SlideGeneratorFormProps> = ({
             </Form.Item>
           </Col>
         </Row>
-
-        <Divider />
-
-        {/* Action Buttons */}
+        <Divider /> {/* Action Buttons */}
         <Form.Item>
           <Space size='middle'>
             <Button type='primary' htmlType='submit' size='large' loading={loading} disabled={disabled}>
-              {loading ? 'Generating Slides...' : 'Generate Slides'}
+              {loading ? 'Processing...' : buttonText}
             </Button>
 
             <Button onClick={handleReset} disabled={loading}>

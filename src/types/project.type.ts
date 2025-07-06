@@ -46,3 +46,15 @@ export interface ProjectResponseDTO {
   slideNum?: number
   templateId?: number
 }
+
+export type UploadLessonPlanFileResponseDTO = {
+  id: string // UUID as string
+  userId: string // UUID as string
+  lessonId: number
+  title: string
+  lessonPlanFileUrl?: string // Changed from lessonPlanFileId
+  customInstructions?: string
+  status: ProjectStatus
+  slideNum?: number
+  templateId?: number
+}
