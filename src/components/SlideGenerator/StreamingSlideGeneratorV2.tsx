@@ -658,7 +658,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
       <Card title='Lesson Plan File Upload' style={{ marginBottom: 24 }}>
         <Space direction='vertical' style={{ width: '100%' }}>
           <div style={{ marginBottom: '16px' }}>
-            <Text>Upload a lesson plan file (PDF, Word, PowerPoint, or Text) to enhance slide generation:</Text>
+            <Text>Upload a lesson plan file (Markdown) to enhance slide generation:</Text>
           </div>
 
           {projectId != null && (
@@ -672,7 +672,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
               <Button
                 type='primary'
                 onClick={() => handleFileUpload(projectId)}
-                disabled={uploading || isStreaming || !projectId}
+                disabled={!file || uploading || isStreaming || !projectId}
                 loading={uploading}
               >
                 {uploading ? 'Uploading...' : 'Upload'}
