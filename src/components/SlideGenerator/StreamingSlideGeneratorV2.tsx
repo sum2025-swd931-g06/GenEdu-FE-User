@@ -11,7 +11,8 @@ import {
   Tabs,
   Typography,
   Upload,
-  UploadProps
+  UploadProps,
+  Spin
 } from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -133,7 +134,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
     formData.append('mediaFile', file.mediaFile)
 
     try {
-      const response = await api.put(`/projects/${projectId}/lesson-plans`, formData, {
+      const response = await api.put(`/projects/${projectId}/lesson-plan`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
@@ -225,29 +226,28 @@ const StreamingSlideGeneratorV2: React.FC = () => {
         return
       }
 
+      const controller = formAbortControllerRef.current || new AbortController()
+
       // Make the streaming request directly
-      const response = await fetch(
-        `http://localhost:8222/api/v1/lecture-contents/d0a8519f-1907-48a6-a5c4-3eb8dce3ce91/slide-content`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            Accept: 'application/json;charset=UTF-8' // Changed from text/event-stream
-          },
-          body: JSON.stringify({
-            lessonId: params.lesson?.lessonId.toString() || '',
-            chapterId: params.lesson?.chapterId.toString() || '',
-            subjectId: '1',
-            materialId: '1',
-            schoolClassId: '1',
-            lessonContentId: '1',
-            CustomerInstructions:
-              params.description || `Auto-generated presentation about ${params.topic || initialTopic}`
-          }),
-          signal: formAbortControllerRef.current?.signal || new AbortController().signal
-        }
-      )
+      const response = await fetch(`http://localhost:8222/api/v1/lecture-contents/${projectId}/slide-content`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json;charset=UTF-8' // Changed from text/event-stream
+        },
+        body: JSON.stringify({
+          lessonId: params.lesson?.lessonId.toString() || '',
+          chapterId: params.lesson?.chapterId.toString() || '',
+          subjectId: '1',
+          materialId: '1',
+          schoolClassId: '1',
+          lessonContentId: '1',
+          CustomerInstructions:
+            params.description || `Auto-generated presentation about ${params.topic || initialTopic}`
+        }),
+        signal: controller.signal
+      })
 
       console.log('Response status:', response.status)
       console.log('Response headers:', Object.fromEntries(response.headers.entries()))
@@ -499,7 +499,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
     }
   }, [])
 
-  if (isLoading) return <div>Loading lessons...</div>
+  if (isLoading) return <Spin tip='Loading lessons...' style={{ display: 'block', margin: '50px auto' }} />
   if (error) return <div>Error: {error.message}</div>
 
   return (

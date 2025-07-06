@@ -11,7 +11,7 @@ export const userAPI = {
 }
 // Project API
 export const projectAPI = {
-  getAllProjectOfUser: (): Promise<ProjectResponseDTO[]> => api.get('/projects').then((res) => res.data),
+  getAllProjectOfUser: (): Promise<ProjectResponseDTO[]> => api.get(`/projects/me`).then((res) => res.data),
 
   getById: (id: string): Promise<ProjectDetail> => api.get(`/projects/${id}`).then((res) => res.data),
 
