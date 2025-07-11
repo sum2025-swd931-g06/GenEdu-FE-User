@@ -4,7 +4,7 @@ export const isDev = process.env.NODE_ENV === 'development'
 
 export const config = {
   kc: {
-    KEYCLOAK_BASE_URL: isDev ? 'http://localhost:9099' : 'https://kc.lch.id.vn',
+    KEYCLOAK_BASE_URL: isDev ? 'https://kc.lch.id.vn' : 'https://kc.lch.id.vn',
     REALM_NAME: 'GenEdu',
     CLIENT_ID: 'genedu-fe'
   }

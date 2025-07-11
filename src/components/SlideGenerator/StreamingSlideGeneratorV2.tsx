@@ -1,4 +1,12 @@
-import { ClearOutlined, SaveOutlined, StopOutlined, UploadOutlined } from '@ant-design/icons'
+import {
+  ClearOutlined,
+  SaveOutlined,
+  StopOutlined,
+  UploadOutlined,
+  FileOutlined,
+  DownloadOutlined,
+  CloudUploadOutlined
+} from '@ant-design/icons'
 import {
   Button,
   Card,
@@ -23,6 +31,8 @@ import { ProjectRequestDTO, ProjectResponseDTO, UploadLessonPlanFileResponseDTO 
 import { TypedSlideData } from '../../types/slideStream.type'
 import RevealPresentation from '../RevealSlides/RevealPresentation'
 import SlideGeneratorForm, { SlideGenerationParams } from './SlideGeneratorForm'
+import { FileService, GeneratedFile } from '../../services/fileService'
+import { PowerPointGenerationOptions } from '../../utils/powerpointGenerator'
 
 const { Text } = Typography
 const { TabPane } = Tabs
@@ -56,6 +66,11 @@ const StreamingSlideGeneratorV2: React.FC = () => {
   // Stream slide
   const [streamSlides, setStreamSlides] = useState<TypedSlideData[]>([])
   const [showRevealPresentation, setShowRevealPresentation] = useState(false)
+
+  // PowerPoint generation states
+  const [generatedFiles, setGeneratedFiles] = useState<GeneratedFile[]>([])
+  const [powerpointGenerating, setPowerpointGenerating] = useState(false)
+  const [uploadingFiles, setUploadingFiles] = useState<string[]>([])
 
   const [isFullscreen, setIsFullscreen] = useState(false)
 
@@ -124,7 +139,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
     formData.append('mediaFile', file.mediaFile)
 
     try {
-      const response = await api.put(`/projects/${projectId}/lesson-plan`, formData, {
+      const response = await api.put(`/projects/lesson-plan`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
@@ -208,7 +223,8 @@ const StreamingSlideGeneratorV2: React.FC = () => {
       return
     }
 
-    try {      setIsStreaming(true)
+    try {
+      setIsStreaming(true)
       setStreamSlides([]) // Clear existing stream slides
       setProgress(0)
 
@@ -235,26 +251,29 @@ const StreamingSlideGeneratorV2: React.FC = () => {
       })
 
       // Make the streaming request directly
-      const response = await fetch(`http://localhost:8222/api/v1/lecture-contents/${projectId}/slide-content`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json;charset=UTF-8'
-        },
-        body: JSON.stringify({
-          lessonId: generationParams.lesson?.lessonId.toString() || '',
-          chapterId: generationParams.lesson?.chapterId.toString() || '',
-          subjectId: '1',
-          materialId: '1',
-          schoolClassId: '1',
-          lessonContentId: '1',
-          CustomerInstructions:
-            generationParams.description ||
-            `Auto-generated presentation about ${generationParams.topic || initialTopic}`
-        }),
-        signal: controller.signal
-      })
+      const response = await fetch(
+        `https://genedu-gateway.lch.id.vn/api/v1/lecture-contents/${projectId}/slide-content`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json;charset=UTF-8'
+          },
+          body: JSON.stringify({
+            lessonId: generationParams.lesson?.lessonId.toString() || '',
+            chapterId: generationParams.lesson?.chapterId.toString() || '',
+            subjectId: '1',
+            materialId: '1',
+            schoolClassId: '1',
+            lessonContentId: '1',
+            CustomerInstructions:
+              generationParams.description ||
+              `Auto-generated presentation about ${generationParams.topic || initialTopic}`
+          }),
+          signal: controller.signal
+        }
+      )
 
       console.log('Response status:', response.status)
       console.log('Response headers:', Object.fromEntries(response.headers.entries()))
@@ -381,7 +400,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
 
               // Add to stream slides
               setStreamSlides((prev) => [...prev, parsed])
-              slideCount++              // Update progress
+              slideCount++ // Update progress
               const expectedSlides = params?.slideCount || 6
               const currentSlideNumber = id ? parseInt(id) : slideCount
               const progressPercent = (currentSlideNumber / expectedSlides) * 100
@@ -397,21 +416,30 @@ const StreamingSlideGeneratorV2: React.FC = () => {
               message: 'Generation Complete',
               description: `All ${slideCount} slides have been generated successfully!`
             })
+
+            // Auto-generate PowerPoint after successful completion
+            setTimeout(() => {
+              generatePowerPoint()
+            }, 1000)
+
             return // Exit the function
           } else if (eventType === 'error') {
             console.error('Server error:', data)
             throw new Error(data || 'Server error occurred')
           }
         }
-      }
-
-      // If we reach here without explicit completion event
+      } // If we reach here without explicit completion event
       setProgress(100)
       setIsStreaming(false)
       notification.success({
         message: 'Generation Complete',
         description: `Generated ${slideCount} slides successfully!`
       })
+
+      // Auto-generate PowerPoint after successful completion
+      setTimeout(() => {
+        generatePowerPoint()
+      }, 1000)
     } finally {
       reader.releaseLock()
     }
@@ -433,6 +461,99 @@ const StreamingSlideGeneratorV2: React.FC = () => {
 
     setIsStreaming(false)
   }
+
+  // PowerPoint generation functions
+  const generatePowerPoint = async () => {
+    if (streamSlides.length === 0) {
+      notification.warning({
+        message: 'No Slides to Convert',
+        description: 'Please generate some slides first before creating a PowerPoint.'
+      })
+      return
+    }
+
+    setPowerpointGenerating(true)
+    try {
+      const topic = generationParams?.topic || initialTopic || 'Generated Slides'
+      const options: PowerPointGenerationOptions = {
+        title: `${topic} - Presentation`,
+        subtitle: `Generated on ${new Date().toLocaleDateString()}`,
+        author: 'GenEdu AI',
+        company: 'GenEdu Platform'
+      }
+
+      const file = await FileService.generateAndSavePowerPoint(streamSlides, projectId || 'temp', options)
+
+      setGeneratedFiles((prev) => [file, ...prev])
+
+      notification.success({
+        message: 'PowerPoint Generated',
+        description: `Successfully created ${file.filename}`
+      })
+    } catch (error) {
+      console.error('PowerPoint generation failed:', error)
+      notification.error({
+        message: 'Generation Failed',
+        description: 'Failed to generate PowerPoint file. Please try again.'
+      })
+    } finally {
+      setPowerpointGenerating(false)
+    }
+  }
+  const downloadFile = async (file: GeneratedFile) => {
+    try {
+      if (file.localPath) {
+        const blob = await FileService.loadBlobFromLocalPath(file.localPath)
+        if (blob) {
+          FileService.downloadBlob(blob, file.filename)
+
+          notification.success({
+            message: 'Download Started',
+            description: `${file.filename} is being downloaded to your Downloads folder.`
+          })
+        } else {
+          throw new Error('File blob not found')
+        }
+      }
+    } catch (error) {
+      console.error('Download failed:', error)
+      notification.error({
+        message: 'Download Failed',
+        description: 'Failed to download the file. Please try again.'
+      })
+    }
+  }
+
+  const uploadFileToServer = async (file: GeneratedFile) => {
+    if (uploadingFiles.includes(file.id)) return
+
+    setUploadingFiles((prev) => [...prev, file.id])
+    try {
+      const updatedFile = await FileService.uploadFileToServer(file, 'https://api.example.com/upload')
+
+      setGeneratedFiles((prev) => prev.map((f) => (f.id === file.id ? updatedFile : f)))
+
+      notification.success({
+        message: 'Upload Complete',
+        description: `${file.filename} has been uploaded to the server.`
+      })
+    } catch (error) {
+      console.error('Upload failed:', error)
+      notification.error({
+        message: 'Upload Failed',
+        description: 'Failed to upload the file to server. Please try again.'
+      })
+    } finally {
+      setUploadingFiles((prev) => prev.filter((id) => id !== file.id))
+    }
+  }
+
+  // Load existing files on component mount
+  useEffect(() => {
+    const files = FileService.getAllFiles()
+    setGeneratedFiles(files)
+  }, [])
+
   const saveSlides = () => {
     if (streamSlides.length === 0) {
       notification.warning({
@@ -451,7 +572,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
     })
 
     setSaveModalVisible(true)
-  }  // Convert TypedSlideData[] to format compatible with save service
+  } // Convert TypedSlideData[] to format compatible with save service
   const convertTypedSlidesToSaveFormat = (typedSlides: TypedSlideData[]) => {
     return typedSlides.map((slide, index) => ({
       id: `slide-${index + 1}`,
@@ -459,7 +580,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
       content: getSlideContent(slide),
       order: index
     }))
-  }  // Extract content from TypedSlideData based on slide type
+  } // Extract content from TypedSlideData based on slide type
   const getSlideContent = (slide: TypedSlideData): string => {
     switch (slide.type) {
       case 'welcome':
@@ -467,9 +588,9 @@ const StreamingSlideGeneratorV2: React.FC = () => {
       case 'content':
         return `${slide.title}\n${slide.data.body}`
       case 'list':
-        return `${slide.title}\n${slide.data.items.map(item => `• ${item}`).join('\n')}`
+        return `${slide.title}\n${slide.data.items.map((item) => `• ${item}`).join('\n')}`
       case 'compare':
-        return `${slide.title}\n${slide.data.left_header}:\n${slide.data.left_points.map(p => `• ${p}`).join('\n')}\n\n${slide.data.right_header}:\n${slide.data.right_points.map(p => `• ${p}`).join('\n')}`
+        return `${slide.title}\n${slide.data.left_header}:\n${slide.data.left_points.map((p) => `• ${p}`).join('\n')}\n\n${slide.data.right_header}:\n${slide.data.right_points.map((p) => `• ${p}`).join('\n')}`
       case 'thanks':
         return `${slide.title}\n${slide.data.message}`
     }
@@ -480,7 +601,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
 
     try {
       const topic = values.topic || generationParams?.topic || initialTopic || 'Generated Slides'
-      
+
       // Convert TypedSlideData to the format expected by DraftProjectService
       const convertedSlides = convertTypedSlidesToSaveFormat(streamSlides)
 
@@ -793,6 +914,108 @@ const StreamingSlideGeneratorV2: React.FC = () => {
             </Card>
           )}
         </TabPane>
+        {/* PowerPoint Generation Tab */}
+        <TabPane tab={`PowerPoint Files (${generatedFiles.length})`} key='powerpoint-files'>
+          <Card
+            title={`PowerPoint Generation & Management`}
+            extra={
+              <Space>
+                <Button
+                  type='primary'
+                  icon={<FileOutlined />}
+                  onClick={generatePowerPoint}
+                  loading={powerpointGenerating}
+                  disabled={streamSlides.length === 0 || powerpointGenerating}
+                >
+                  {powerpointGenerating ? 'Generating...' : 'Generate PowerPoint'}
+                </Button>
+              </Space>
+            }
+          >
+            {streamSlides.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                <Text type='secondary'>No slides generated yet. Generate slides first to create PowerPoint files.</Text>
+              </div>
+            ) : generatedFiles.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                <Text type='secondary'>
+                  No PowerPoint files generated yet. Click "Generate PowerPoint" to create your first file.
+                </Text>
+              </div>
+            ) : (
+              <div>
+                <Text strong style={{ marginBottom: 16, display: 'block' }}>
+                  Generated Files ({generatedFiles.length}):
+                </Text>
+                <Space direction='vertical' style={{ width: '100%' }}>
+                  {generatedFiles.map((file) => (
+                    <Card
+                      key={file.id}
+                      size='small'
+                      style={{ marginBottom: 8 }}
+                      actions={[
+                        <Button
+                          key='download'
+                          type='link'
+                          icon={<DownloadOutlined />}
+                          onClick={() => downloadFile(file)}
+                          disabled={!file.localPath}
+                        >
+                          Download
+                        </Button>,
+                        <Button
+                          key='upload'
+                          type='link'
+                          icon={<CloudUploadOutlined />}
+                          onClick={() => uploadFileToServer(file)}
+                          loading={uploadingFiles.includes(file.id)}
+                          disabled={file.uploadStatus === 'uploaded' || uploadingFiles.includes(file.id)}
+                        >
+                          {file.uploadStatus === 'uploaded' ? 'Uploaded' : 'Upload to Server'}
+                        </Button>
+                      ]}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{file.filename}</div>
+                          <div style={{ fontSize: '12px', color: '#666' }}>
+                            Size: {(file.size / 1024).toFixed(1)} KB | Created:{' '}
+                            {new Date(file.createdAt).toLocaleString()}
+                          </div>
+                          {file.uploadUrl && (
+                            <div style={{ fontSize: '12px', color: '#1890ff', marginTop: 4 }}>
+                              Server URL: {file.uploadUrl}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          {file.uploadStatus === 'uploaded' && (
+                            <span style={{ color: '#52c41a', fontSize: '12px' }}>✓ Uploaded</span>
+                          )}
+                          {file.uploadStatus === 'pending' && (
+                            <span style={{ color: '#faad14', fontSize: '12px' }}>⏳ Pending</span>
+                          )}
+                          {file.uploadStatus === 'failed' && (
+                            <span style={{ color: '#ff4d4f', fontSize: '12px' }}>✗ Failed</span>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </Space>
+              </div>
+            )}
+
+            {powerpointGenerating && (
+              <div style={{ textAlign: 'center', marginTop: 20 }}>
+                <Spin size='large' />
+                <div style={{ marginTop: 10 }}>
+                  <Text type='secondary'>Generating PowerPoint file...</Text>
+                </div>
+              </div>
+            )}
+          </Card>
+        </TabPane>
       </Tabs>{' '}
       <Card title='Lesson Plan File Upload' style={{ marginBottom: 24 }}>
         <Space direction='vertical' style={{ width: '100%' }}>
@@ -878,11 +1101,8 @@ const StreamingSlideGeneratorV2: React.FC = () => {
         >
           <Card size='small'>
             <Space direction='vertical' style={{ width: '100%' }}>
-              <Text strong>Generating Slides...</Text>              <Progress
-                percent={Math.round(progress)}
-                status='active'
-                format={() => `${streamSlides.length} slides`}
-              />
+              <Text strong>Generating Slides...</Text>{' '}
+              <Progress percent={Math.round(progress)} status='active' format={() => `${streamSlides.length} slides`} />
               <Button danger icon={<StopOutlined />} onClick={stopStreaming} size='small' block>
                 Stop Generation
               </Button>
@@ -926,11 +1146,12 @@ const StreamingSlideGeneratorV2: React.FC = () => {
               borderRadius: '6px',
               marginBottom: '16px'
             }}
-          >            <Text style={{ fontSize: '12px', color: '#666' }}>
+          >
+            {' '}
+            <Text style={{ fontSize: '12px', color: '#666' }}>
               <strong>Preview:</strong>
               <br />• <strong>Slides:</strong> {streamSlides.length}
-              <br />• <strong>Types:</strong>{' '}
-              {[...new Set(streamSlides.map((s) => s.type))].join(', ')}
+              <br />• <strong>Types:</strong> {[...new Set(streamSlides.map((s) => s.type))].join(', ')}
               <br />• <strong>Total Content:</strong> {streamSlides.length} slides ready to save
             </Text>
           </div>
