@@ -590,7 +590,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
   const convertToServerFormat = (slides: TypedSlideData[]): SlideContentRequest[] => {
     return slides.map((slide, index) => {
       let subpoints: Record<string, unknown> = {}
-      
+
       // Convert slide data to subpoints based on slide type
       switch (slide.type) {
         case 'welcome':
@@ -645,7 +645,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
     }
 
     const slideContents = convertToServerFormat(slides)
-    
+
     const requestBody: LectureContentRequest = {
       projectId,
       title,
@@ -658,9 +658,9 @@ const StreamingSlideGeneratorV2: React.FC = () => {
       const response = await fetch('https://genedu-gateway.lch.id.vn/api/v1/projects/lecture-content', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          Accept: 'application/json'
         },
         body: JSON.stringify(requestBody)
       })
@@ -672,7 +672,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
 
       const result: LectureContentResponse = await response.json()
       console.log('Server save successful:', result)
-      
+
       return result
     } catch (error) {
       console.error('Failed to save to server:', error)
@@ -721,11 +721,11 @@ const StreamingSlideGeneratorV2: React.FC = () => {
         return `${slide.title}\n${slide.data.message}`
     }
   }
-  const handleSavePresentation = async (values: { 
+  const handleSavePresentation = async (values: {
     title: string
     description?: string
     topic?: string
-    saveToServer?: boolean 
+    saveToServer?: boolean
   }) => {
     setSaving(true)
 
@@ -761,12 +761,14 @@ const StreamingSlideGeneratorV2: React.FC = () => {
       if (values.saveToServer && projectId) {
         try {
           await saveToServer(values.title, streamSlides)
-          
+
           notification.success({
             message: 'Presentation Saved Successfully!',
             description: (
               <div>
-                <div>"{values.title}" with {streamSlides.length} slides has been saved to both your profile and the server.</div>
+                <div>
+                  "{values.title}" with {streamSlides.length} slides has been saved to both your profile and the server.
+                </div>
                 <div style={{ marginTop: '8px', fontSize: '12px', color: '#52c41a' }}>
                   ✓ Local save complete ✓ Server save complete
                 </div>
@@ -821,7 +823,9 @@ const StreamingSlideGeneratorV2: React.FC = () => {
           message: 'Draft Saved Locally!',
           description: (
             <div>
-              <div>"{values.title}" with {streamSlides.length} slides has been saved as a draft to your profile.</div>
+              <div>
+                "{values.title}" with {streamSlides.length} slides has been saved as a draft to your profile.
+              </div>
               <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
                 💡 Enable "Save to Server" to persist slides on the server
               </div>
@@ -974,7 +978,8 @@ const StreamingSlideGeneratorV2: React.FC = () => {
         <TabPane tab={`Reveal.js Presentation (${streamSlides.length})`} key='reveal-presentation'>
           {streamSlides.length > 0 ? (
             <Card
-              title={`Generated Presentation (${streamSlides.length} slides)`}              extra={
+              title={`Generated Presentation (${streamSlides.length} slides)`}
+              extra={
                 <Space>
                   <Button type='primary' onClick={() => setShowRevealPresentation(!showRevealPresentation)}>
                     {showRevealPresentation ? 'Hide' : 'Show'} Presentation
@@ -984,14 +989,14 @@ const StreamingSlideGeneratorV2: React.FC = () => {
                   </Button>
                   {/* Add quick server save button */}
                   {projectId && (
-                    <Button 
-                      icon={<CloudUploadOutlined />} 
+                    <Button
+                      icon={<CloudUploadOutlined />}
                       onClick={async () => {
                         try {
                           setSaving(true)
                           const title = `${generationParams?.topic || initialTopic || 'Generated Slides'} - ${new Date().toLocaleDateString()}`
                           await saveToServer(title, streamSlides)
-                          
+
                           notification.success({
                             message: 'Quick Save Successful!',
                             description: `"${title}" has been saved to the server.`,
@@ -1322,7 +1327,8 @@ const StreamingSlideGeneratorV2: React.FC = () => {
             </Space>
           </Card>
         </div>
-      )}      {/* Save Presentation Modal */}
+      )}{' '}
+      {/* Save Presentation Modal */}
       <Modal
         title='Save Presentation'
         open={saveModalVisible}
@@ -1354,18 +1360,17 @@ const StreamingSlideGeneratorV2: React.FC = () => {
           <Form.Item name='saveToServer' valuePropName='checked' label='Save Options'>
             <div>
               <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                <input 
-                  type="checkbox" 
+                <input
+                  type='checkbox'
                   style={{ marginRight: '8px' }}
                   onChange={(e) => saveForm.setFieldValue('saveToServer', e.target.checked)}
                 />
                 <span>Save to server (persist slides permanently)</span>
               </label>
               <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', marginLeft: '20px' }}>
-                {projectId 
-                  ? '✓ Server save available with current project' 
-                  : '⚠️ Server save requires an active project'
-                }
+                {projectId
+                  ? '✓ Server save available with current project'
+                  : '⚠️ Server save requires an active project'}
               </div>
             </div>
           </Form.Item>
