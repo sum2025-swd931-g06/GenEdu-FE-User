@@ -34,6 +34,38 @@ import SlideGeneratorForm, { SlideGenerationParams } from './SlideGeneratorForm'
 import { FileService, GeneratedFile } from '../../services/fileService'
 import { PowerPointGenerationOptions } from '../../utils/powerpointGenerator'
 
+// Add types for server API
+interface SlideContentRequest {
+  title: string
+  slideType: string
+  orderNumber: number
+  subpoints: Record<string, unknown>
+  narrationScript: string | null
+}
+
+interface LectureContentRequest {
+  projectId: string
+  title: string
+  slideContents: SlideContentRequest[]
+}
+
+interface SlideContentResponse {
+  lectureContentId: string
+  title: string
+  slideType: string
+  orderNumber: number
+  subpoints: Record<string, unknown>
+  narrationScript: string | null
+}
+
+interface LectureContentResponse {
+  id: string
+  projectId: string
+  title: string
+  status: string
+  slideContents: SlideContentResponse[]
+}
+
 const { Text } = Typography
 const { TabPane } = Tabs
 
@@ -554,6 +586,100 @@ const StreamingSlideGeneratorV2: React.FC = () => {
     setGeneratedFiles(files)
   }, [])
 
+  // Convert TypedSlideData to server format
+  const convertToServerFormat = (slides: TypedSlideData[]): SlideContentRequest[] => {
+    return slides.map((slide, index) => {
+      let subpoints: Record<string, unknown> = {}
+      
+      // Convert slide data to subpoints based on slide type
+      switch (slide.type) {
+        case 'welcome':
+          subpoints = {
+            subtitle: slide.data.subtitle
+          }
+          break
+        case 'content':
+          subpoints = {
+            body: slide.data.body
+          }
+          break
+        case 'list':
+          subpoints = {
+            items: slide.data.items
+          }
+          break
+        case 'compare':
+          subpoints = {
+            left_header: slide.data.left_header,
+            left_points: slide.data.left_points,
+            right_header: slide.data.right_header,
+            right_points: slide.data.right_points
+          }
+          break
+        case 'thanks':
+          subpoints = {
+            message: slide.data.message
+          }
+          break
+      }
+
+      return {
+        title: slide.title,
+        slideType: slide.type,
+        orderNumber: index + 1,
+        subpoints,
+        narrationScript: slide.narrationScript || null
+      }
+    })
+  }
+
+  // Save slides to server
+  const saveToServer = async (title: string, slides: TypedSlideData[]): Promise<LectureContentResponse> => {
+    if (!projectId) {
+      throw new Error('Project ID is required to save to server')
+    }
+
+    const token = getAuthToken()
+    if (!token) {
+      throw new Error('Authentication token is required')
+    }
+
+    const slideContents = convertToServerFormat(slides)
+    
+    const requestBody: LectureContentRequest = {
+      projectId,
+      title,
+      slideContents
+    }
+
+    console.log('Saving to server:', requestBody)
+
+    try {
+      const response = await fetch('https://genedu-gateway.lch.id.vn/api/v1/projects/lecture-content', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Server error: ${response.status} - ${errorText}`)
+      }
+
+      const result: LectureContentResponse = await response.json()
+      console.log('Server save successful:', result)
+      
+      return result
+    } catch (error) {
+      console.error('Failed to save to server:', error)
+      throw error
+    }
+  }
+
   const saveSlides = () => {
     if (streamSlides.length === 0) {
       notification.warning({
@@ -595,8 +721,12 @@ const StreamingSlideGeneratorV2: React.FC = () => {
         return `${slide.title}\n${slide.data.message}`
     }
   }
-
-  const handleSavePresentation = async (values: { title: string; description?: string; topic?: string }) => {
+  const handleSavePresentation = async (values: { 
+    title: string
+    description?: string
+    topic?: string
+    saveToServer?: boolean 
+  }) => {
     setSaving(true)
 
     try {
@@ -622,33 +752,97 @@ const StreamingSlideGeneratorV2: React.FC = () => {
         }
       }
 
-      // Save to localStorage directly (since we're using TypedSlideData format)
+      // Always save to localStorage first
       const existingProjects = JSON.parse(localStorage.getItem('genedu_draft_projects') || '[]')
       existingProjects.push(projectDetail)
       localStorage.setItem('genedu_draft_projects', JSON.stringify(existingProjects))
 
-      notification.success({
-        message: 'Draft Project Saved Successfully!',
-        description: (
-          <div>
-            <div>{`"${values.title}" with ${streamSlides.length} slides has been saved as a draft project to your profile.`}</div>
-            <div style={{ marginTop: '8px' }}>
-              <Button
-                type='link'
-                size='small'
-                onClick={() => {
-                  navigate('/profile')
-                  notification.destroy()
-                }}
-              >
-                View in Profile →
-              </Button>
+      // If user wants to save to server and we have a projectId
+      if (values.saveToServer && projectId) {
+        try {
+          await saveToServer(values.title, streamSlides)
+          
+          notification.success({
+            message: 'Presentation Saved Successfully!',
+            description: (
+              <div>
+                <div>"{values.title}" with {streamSlides.length} slides has been saved to both your profile and the server.</div>
+                <div style={{ marginTop: '8px', fontSize: '12px', color: '#52c41a' }}>
+                  ✓ Local save complete ✓ Server save complete
+                </div>
+                <div style={{ marginTop: '8px' }}>
+                  <Button
+                    type='link'
+                    size='small'
+                    onClick={() => {
+                      navigate('/profile')
+                      notification.destroy()
+                    }}
+                  >
+                    View in Profile →
+                  </Button>
+                </div>
+              </div>
+            ),
+            duration: 8,
+            placement: 'topRight'
+          })
+        } catch (serverError) {
+          console.error('Server save failed:', serverError)
+          notification.warning({
+            message: 'Partial Save Success',
+            description: (
+              <div>
+                <div>"{values.title}" has been saved locally, but server save failed.</div>
+                <div style={{ marginTop: '8px', fontSize: '12px', color: '#fa8c16' }}>
+                  ✓ Local save complete ✗ Server save failed
+                </div>
+                <div style={{ marginTop: '8px' }}>
+                  <Button
+                    type='link'
+                    size='small'
+                    onClick={() => {
+                      navigate('/profile')
+                      notification.destroy()
+                    }}
+                  >
+                    View in Profile →
+                  </Button>
+                </div>
+              </div>
+            ),
+            duration: 8,
+            placement: 'topRight'
+          })
+        }
+      } else {
+        // Local save only
+        notification.success({
+          message: 'Draft Saved Locally!',
+          description: (
+            <div>
+              <div>"{values.title}" with {streamSlides.length} slides has been saved as a draft to your profile.</div>
+              <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
+                💡 Enable "Save to Server" to persist slides on the server
+              </div>
+              <div style={{ marginTop: '8px' }}>
+                <Button
+                  type='link'
+                  size='small'
+                  onClick={() => {
+                    navigate('/profile')
+                    notification.destroy()
+                  }}
+                >
+                  View in Profile →
+                </Button>
+              </div>
             </div>
-          </div>
-        ),
-        duration: 6,
-        placement: 'topRight'
-      })
+          ),
+          duration: 6,
+          placement: 'topRight'
+        })
+      }
 
       setSaveModalVisible(false)
       saveForm.resetFields()
@@ -780,8 +974,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
         <TabPane tab={`Reveal.js Presentation (${streamSlides.length})`} key='reveal-presentation'>
           {streamSlides.length > 0 ? (
             <Card
-              title={`Generated Presentation (${streamSlides.length} slides)`}
-              extra={
+              title={`Generated Presentation (${streamSlides.length} slides)`}              extra={
                 <Space>
                   <Button type='primary' onClick={() => setShowRevealPresentation(!showRevealPresentation)}>
                     {showRevealPresentation ? 'Hide' : 'Show'} Presentation
@@ -789,6 +982,37 @@ const StreamingSlideGeneratorV2: React.FC = () => {
                   <Button icon={<SaveOutlined />} onClick={saveSlides} type='primary'>
                     Save Presentation
                   </Button>
+                  {/* Add quick server save button */}
+                  {projectId && (
+                    <Button 
+                      icon={<CloudUploadOutlined />} 
+                      onClick={async () => {
+                        try {
+                          setSaving(true)
+                          const title = `${generationParams?.topic || initialTopic || 'Generated Slides'} - ${new Date().toLocaleDateString()}`
+                          await saveToServer(title, streamSlides)
+                          
+                          notification.success({
+                            message: 'Quick Save Successful!',
+                            description: `"${title}" has been saved to the server.`,
+                            duration: 4
+                          })
+                        } catch (error) {
+                          console.error('Quick save failed:', error)
+                          notification.error({
+                            message: 'Quick Save Failed',
+                            description: 'Failed to save to server. Use the detailed save option instead.'
+                          })
+                        } finally {
+                          setSaving(false)
+                        }
+                      }}
+                      loading={saving}
+                      type='default'
+                    >
+                      Quick Save to Server
+                    </Button>
+                  )}
                   <Button icon={<ClearOutlined />} onClick={() => setStreamSlides([])}>
                     Clear
                   </Button>
@@ -1098,8 +1322,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
             </Space>
           </Card>
         </div>
-      )}
-      {/* Save Presentation Modal */}
+      )}      {/* Save Presentation Modal */}
       <Modal
         title='Save Presentation'
         open={saveModalVisible}
@@ -1127,6 +1350,26 @@ const StreamingSlideGeneratorV2: React.FC = () => {
             <Input.TextArea rows={3} placeholder='Brief description of your presentation content' />
           </Form.Item>
 
+          {/* Add server save option */}
+          <Form.Item name='saveToServer' valuePropName='checked' label='Save Options'>
+            <div>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  style={{ marginRight: '8px' }}
+                  onChange={(e) => saveForm.setFieldValue('saveToServer', e.target.checked)}
+                />
+                <span>Save to server (persist slides permanently)</span>
+              </label>
+              <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', marginLeft: '20px' }}>
+                {projectId 
+                  ? '✓ Server save available with current project' 
+                  : '⚠️ Server save requires an active project'
+                }
+              </div>
+            </div>
+          </Form.Item>
+
           {/* Preview Info */}
           <div
             style={{
@@ -1136,19 +1379,19 @@ const StreamingSlideGeneratorV2: React.FC = () => {
               marginBottom: '16px'
             }}
           >
-            {' '}
             <Text style={{ fontSize: '12px', color: '#666' }}>
               <strong>Preview:</strong>
               <br />• <strong>Slides:</strong> {streamSlides.length}
               <br />• <strong>Types:</strong> {[...new Set(streamSlides.map((s) => s.type))].join(', ')}
-              <br />• <strong>Total Content:</strong> {streamSlides.length} slides ready to save
+              <br />• <strong>Project ID:</strong> {projectId || 'Not available'}
+              <br />• <strong>Save Mode:</strong> Local {projectId ? '+ Server (optional)' : 'only'}
             </Text>
           </div>
 
           <Form.Item>
             <Space>
               <Button type='primary' htmlType='submit' loading={saving}>
-                Save to Profile
+                {saving ? 'Saving...' : 'Save Presentation'}
               </Button>
               <Button
                 onClick={() => {
