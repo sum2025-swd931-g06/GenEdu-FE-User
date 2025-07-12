@@ -5,8 +5,37 @@ export interface Slide {
   order: number
 }
 
+// Forward declaration for SlideGenerationParams to avoid circular dependencies
+export interface SlideGenerationParams {
+  topic: string
+  description?: string
+  slideCount: number
+  lesson?: unknown // Use unknown instead of any for better type safety
+}
+
 export interface ProjectDetail extends Project {
   slides: Slide[]
+  // Optional properties for draft projects
+  creationTime?: number
+  metadata?: {
+    topic?: string
+    description?: string
+    generationParams?: SlideGenerationParams
+    totalWords?: number
+    layoutDistribution?: Record<string, number>
+    themes?: string[]
+    totalSlides?: number
+    createdFrom?: string
+  }
+  // Optional audio project for full projects
+  audioProject?: {
+    id?: string
+    title?: string
+    status?: 'DRAFT' | 'PROCESSING' | 'COMPLETED' | 'ERROR'
+    audioUrl?: string
+    textContent?: string
+    duration?: number
+  }
 }
 
 // Project types - Updated to align with simplified backend entity

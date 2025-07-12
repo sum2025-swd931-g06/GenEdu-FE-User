@@ -17,6 +17,7 @@ import {
 import { DraftProjectService } from '../../services/savedSlidesService'
 import RevealSlideViewer, { RevealSlideViewerRef } from '../../components/SlideViewer'
 import { ProjectDetail, ProjectStatus } from '../../types/project.type'
+import { useProjectDetail } from '../../queries/useProjects'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -26,8 +27,8 @@ const ProjectDetailPage: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement>(null)
   const slideViewerRef = useRef<RevealSlideViewerRef>(null)
 
-  // Use the dedicated useProject hook for loading project details
-  // const { projectDetail: project, loading: projectLoading, error: projectError } = useProject(id)
+  // Use the useProjectDetail hook for loading project details from server
+  const { data: project, isLoading: projectLoading, error: projectError } = useProjectDetail(id || '')
 
   // State for handling draft projects (projects without audio)
   const [draftProject, setDraftProject] = useState<ProjectDetail | null>(null)
@@ -40,7 +41,6 @@ const ProjectDetailPage: React.FC = () => {
   const [audioDuration, setAudioDuration] = useState(0)
   const [volume, setVolume] = useState(1)
   const [isFullscreen, setIsFullscreen] = useState(false)
-
   // Check if this is a draft project or regular project
   useEffect(() => {
     if (id) {
@@ -51,7 +51,7 @@ const ProjectDetailPage: React.FC = () => {
         setIsDraftProject(true)
         setLoading(false)
       } else {
-        // If not found as draft project, let useProject handle it
+        // If not found as draft project, set state based on project query
         setIsDraftProject(false)
         setLoading(projectLoading)
       }
@@ -129,7 +129,6 @@ const ProjectDetailPage: React.FC = () => {
     const remainingSeconds = Math.floor(seconds % 60)
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
   }
-
   const getStatusColor = (status: ProjectStatus) => {
     switch (status) {
       case 'COMPLETED':
@@ -143,9 +142,33 @@ const ProjectDetailPage: React.FC = () => {
     }
   }
 
+  const getAudioStatusColor = (status: string) => {
+    switch (status) {
+      case 'COMPLETED':
+        return 'green'
+      case 'PROCESSING':
+        return 'blue'
+      case 'DRAFT':
+        return 'orange'
+      case 'ERROR':
+        return 'red'
+      default:
+        return 'default'
+    }
+  }
   // Determine what data to use - we now have only one Project type
   const projectData = isDraftProject ? draftProject : project
   const slides = projectData?.slides || []
+
+  // Reset slide index when slides change or are empty
+  useEffect(() => {
+    const slideCount = slides.length
+    if (slideCount === 0) {
+      setCurrentSlideIndex(0)
+    } else if (currentSlideIndex >= slideCount) {
+      setCurrentSlideIndex(slideCount - 1)
+    }
+  }, [slides.length, currentSlideIndex])
 
   // Navigation functions with useCallback to prevent dependency issues
   const nextSlide = useCallback(() => {
@@ -232,8 +255,7 @@ const ProjectDetailPage: React.FC = () => {
       </div>
     )
   }
-
-  const currentSlide = slides[currentSlideIndex]
+  const currentSlide = slides.length > 0 && currentSlideIndex < slides.length ? slides[currentSlideIndex] : null
 
   return (
     <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
@@ -267,49 +289,59 @@ const ProjectDetailPage: React.FC = () => {
       <Row gutter={24}>
         {/* Slide Viewer */}
         <Col xs={24} lg={16}>
+          {' '}
           <Card
             title={
               <Row justify='space-between' align='middle' style={{ width: '100%' }}>
                 <Col>
                   <Text strong>
-                    Slide {currentSlideIndex + 1} of {slides.length}
+                    {slides.length > 0 ? `Slide ${currentSlideIndex + 1} of ${slides.length}` : 'No slides available'}
                   </Text>
                 </Col>
                 <Col>
                   <Space>
-                    <Button icon={<LeftOutlined />} onClick={prevSlide} disabled={currentSlideIndex === 0} />
+                    <Button
+                      icon={<LeftOutlined />}
+                      onClick={prevSlide}
+                      disabled={currentSlideIndex === 0 || slides.length === 0}
+                    />
                     <Button
                       icon={<RightOutlined />}
                       onClick={nextSlide}
-                      disabled={currentSlideIndex === slides.length - 1}
+                      disabled={currentSlideIndex === slides.length - 1 || slides.length === 0}
                     />
-                    <Button icon={<FullscreenOutlined />} onClick={enterFullscreen} />
+                    <Button icon={<FullscreenOutlined />} onClick={enterFullscreen} disabled={slides.length === 0} />
                   </Space>
                 </Col>
               </Row>
             }
           >
-            <RevealSlideViewer
-              ref={slideViewerRef}
-              slides={slides}
-              currentSlideIndex={currentSlideIndex}
-              onSlideChange={handleSlideChange}
-              height='400px'
-              embedded={true}
-              showControls={false}
-            />
+            {slides.length > 0 ? (
+              <RevealSlideViewer
+                ref={slideViewerRef}
+                slides={slides}
+                currentSlideIndex={currentSlideIndex}
+                onSlideChange={handleSlideChange}
+                height='400px'
+                embedded={true}
+                showControls={false}
+              />
+            ) : (
+              <div style={{ textAlign: 'center', padding: '50px', color: '#999' }}>
+                <Text type='secondary'>No slides available for this project</Text>
+              </div>
+            )}
           </Card>
-
           {/* Slide Navigation */}
           <Card style={{ marginTop: '16px' }}>
             <Progress
               percent={slides.length > 0 ? ((currentSlideIndex + 1) / slides.length) * 100 : 0}
               showInfo={false}
               strokeColor='#1890ff'
-            />
+            />{' '}
             <div style={{ marginTop: '16px' }}>
               <Text strong>Current Slide: </Text>
-              <Text>{currentSlide.title}</Text>
+              <Text>{currentSlide ? currentSlide.title : 'No slide selected'}</Text>
             </div>
           </Card>
         </Col>
