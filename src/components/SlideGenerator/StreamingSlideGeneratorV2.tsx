@@ -971,7 +971,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
                           loading={uploadingFiles.includes(file.id)}
                           disabled={file.uploadStatus === 'uploaded' || uploadingFiles.includes(file.id)}
                         >
-                          {file.uploadStatus === 'uploaded' ? 'Uploaded' : 'Upload to Server'}
+                          {file.uploadStatus === 'uploaded' ? 'Uploaded' : 'Select This File'}
                         </Button>
                       ]}
                     >
@@ -1023,7 +1023,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
             <Text>Upload a lesson plan file (Markdown) to enhance slide generation:</Text>
           </div>
 
-          {projectId ? (
+          {projectId && (
             <Space align='start' style={{ width: '100%' }}>
               <Upload {...uploadProps}>
                 <Button icon={<UploadOutlined />} disabled={uploading || isStreaming}>
@@ -1040,24 +1040,13 @@ const StreamingSlideGeneratorV2: React.FC = () => {
                 {uploading ? 'Uploading...' : 'Upload'}
               </Button>
             </Space>
-          ) : (
-            <div
-              style={{
-                padding: '16px',
-                backgroundColor: '#fff7e6',
-                border: '1px solid #ffd591',
-                borderRadius: '6px'
-              }}
-            >
-              <Text type='secondary'>Please create a project first before uploading files.</Text>
-            </div>
           )}
 
           {/* Upload Progress */}
           {uploading && <Progress percent={uploadProgress} status='active' format={() => 'Uploading...'} />}
 
           {/* Project ID Status */}
-          <div
+          {/* <div
             style={{
               padding: '8px 12px',
               backgroundColor: projectId ? '#f6ffed' : '#fff2e8',
@@ -1069,7 +1058,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
               <strong>Project Status:</strong>{' '}
               {projectId ? `Project ID: ${projectId}` : 'No project created yet - generate slides first'}
             </Text>
-          </div>
+          </div> */}
 
           {/* File Upload Info */}
           <div
