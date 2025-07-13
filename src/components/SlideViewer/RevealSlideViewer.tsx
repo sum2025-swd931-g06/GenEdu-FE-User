@@ -2,7 +2,7 @@ import { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 
 import Reveal from 'reveal.js'
 import 'reveal.js/dist/reveal.css'
 import 'reveal.js/dist/theme/white.css' // Using white theme for better integration with the UI
-import { Slide } from '../../types/auth.type'
+import { Slide } from '../../types/project.type'
 
 // Custom responsive styles for reveal.js
 const customStyles = `
@@ -225,72 +225,72 @@ const RevealSlideViewer = forwardRef<RevealSlideViewerRef, RevealSlideViewerProp
       }
     }))
 
-  const initReveal = useCallback(() => {
-    if (!revealRef.current || slides.length === 0) return
+    const initReveal = useCallback(() => {
+      if (!revealRef.current || slides.length === 0) return
 
-    // Destroy existing instance
-    if (revealInstance.current) {
-      revealInstance.current.destroy()
-      revealInstance.current = null
-    }
+      // Destroy existing instance
+      if (revealInstance.current) {
+        revealInstance.current.destroy()
+        revealInstance.current = null
+      }
 
-    // Inject custom styles
-    const styleId = 'reveal-custom-styles'
-    let styleElement = document.getElementById(styleId)
-    if (!styleElement) {
-      styleElement = document.createElement('style')
-      styleElement.id = styleId
-      styleElement.textContent = customStyles
-      document.head.appendChild(styleElement)
-    }
+      // Inject custom styles
+      const styleId = 'reveal-custom-styles'
+      let styleElement = document.getElementById(styleId)
+      if (!styleElement) {
+        styleElement = document.createElement('style')
+        styleElement.id = styleId
+        styleElement.textContent = customStyles
+        document.head.appendChild(styleElement)
+      }
 
-    const deck = new Reveal(revealRef.current, {
-      embedded,
-      hash: false,
-      transition: 'fade',
-      transitionSpeed: 'fast',
-      backgroundTransition: 'none',
-      controls: showControls,
-      progress: showControls,
-      center: true,
-      touch: true,
-      loop: false,
-      rtl: false,
-      shuffle: false,
-      fragments: false,
-      autoSlide: 0,
-      keyboard: embedded ? false : true,
-      mouseWheel: false,
-      hideInactiveCursor: true,
-      hideCursorTime: 5000,
-      previewLinks: false,
-      width: '100%',
-      height: '100%',
-      margin: 0.1,
-      minScale: 0.2,
-      maxScale: 1.0,
-      viewDistance: 1
-    })
-
-    deck
-      .initialize()
-      .then(() => {
-        revealInstance.current = deck
-
-        // Simple slide change handler
-        const handleSlideChanged = () => {
-          const indices = deck.getIndices()
-          const slideIndex = indices?.h || 0
-          onSlideChange?.(slideIndex)
-        }
-
-        // Listen for slide changes
-        deck.on('slidechanged', handleSlideChanged)
+      const deck = new Reveal(revealRef.current, {
+        embedded,
+        hash: false,
+        transition: 'fade',
+        transitionSpeed: 'fast',
+        backgroundTransition: 'none',
+        controls: showControls,
+        progress: showControls,
+        center: true,
+        touch: true,
+        loop: false,
+        rtl: false,
+        shuffle: false,
+        fragments: false,
+        autoSlide: 0,
+        keyboard: embedded ? false : true,
+        mouseWheel: false,
+        hideInactiveCursor: true,
+        hideCursorTime: 5000,
+        previewLinks: false,
+        width: '100%',
+        height: '100%',
+        margin: 0.1,
+        minScale: 0.2,
+        maxScale: 1.0,
+        viewDistance: 1
       })
-      .catch((error) => {
-        console.error('Failed to initialize Reveal.js:', error)
-      })
-  }, [slides.length, embedded, showControls, onSlideChange])
+
+      deck
+        .initialize()
+        .then(() => {
+          revealInstance.current = deck
+
+          // Simple slide change handler
+          const handleSlideChanged = () => {
+            const indices = deck.getIndices()
+            const slideIndex = indices?.h || 0
+            onSlideChange?.(slideIndex)
+          }
+
+          // Listen for slide changes
+          deck.on('slidechanged', handleSlideChanged)
+        })
+        .catch((error) => {
+          console.error('Failed to initialize Reveal.js:', error)
+        })
+    }, [slides.length, embedded, showControls, onSlideChange])
 
     // Initialize reveal when slides change
     useEffect(() => {
@@ -336,43 +336,47 @@ const RevealSlideViewer = forwardRef<RevealSlideViewerRef, RevealSlideViewerProp
       // Parse slide content and render as reveal.js section with responsive sizing
       return (
         <section key={slide.id} data-slide-id={slide.id}>
-          <div style={{ 
-            textAlign: 'center',
-            padding: '10px',
-            maxHeight: '100%',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            width: '100%',
-            height: '100%',
-            boxSizing: 'border-box',
-            // Hardware acceleration to prevent flash
-            transform: 'translateZ(0)',
-            backfaceVisibility: 'hidden',
-            perspective: '1000px',
-            // Prevent layout shifts
-            willChange: 'transform',
-            contain: 'layout style paint'
-          }}>
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '10px',
+              maxHeight: '100%',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              width: '100%',
+              height: '100%',
+              boxSizing: 'border-box',
+              // Hardware acceleration to prevent flash
+              transform: 'translateZ(0)',
+              backfaceVisibility: 'hidden',
+              perspective: '1000px',
+              // Prevent layout shifts
+              willChange: 'transform',
+              contain: 'layout style paint'
+            }}
+          >
             {slide.title && (
-              <h2 style={{ 
-                marginBottom: '0.5em', 
-                color: '#333',
-                fontSize: 'clamp(1rem, 3.5vw, 1.8rem)', // More conservative responsive font size
-                fontWeight: '600',
-                lineHeight: '1.2',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                maxHeight: '25%',
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                // Prevent layout shifts
-                contain: 'layout style'
-              }}>
+              <h2
+                style={{
+                  marginBottom: '0.5em',
+                  color: '#333',
+                  fontSize: 'clamp(1rem, 3.5vw, 1.8rem)', // More conservative responsive font size
+                  fontWeight: '600',
+                  lineHeight: '1.2',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxHeight: '25%',
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  // Prevent layout shifts
+                  contain: 'layout style'
+                }}
+              >
                 {slide.title}
               </h2>
             )}
