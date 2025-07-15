@@ -1,7 +1,8 @@
 import { ReactKeycloakProvider } from '@react-keycloak/web'
-import { Alert, Card, Spin, Typography } from 'antd'
+import { Alert, Card, Typography } from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
 import { initOptions, isKeycloakInitialized, keycloak, setKeycloakInitialized } from '../../config/keycloak'
+import Loader from '../Loader'
 
 const { Title, Text } = Typography
 
@@ -41,24 +42,6 @@ const KeycloakWrapper: React.FC<KeycloakWrapperProps> = ({ children }) => {
     initRef.current = true
   }, [])
 
-  // Loading component
-  const LoadingComponent = () => (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        flexDirection: 'column',
-        gap: '16px',
-        background: '#f0f2f5'
-      }}
-    >
-      <Spin size='large' />
-      <Text>Initializing authentication...</Text>
-    </div>
-  )
-
   // Error component
   const ErrorComponent = () => (
     <div
@@ -90,7 +73,7 @@ const KeycloakWrapper: React.FC<KeycloakWrapperProps> = ({ children }) => {
   )
 
   if (isInitializing) {
-    return <LoadingComponent />
+    return <Loader />
   }
 
   if (initError) {
@@ -101,7 +84,7 @@ const KeycloakWrapper: React.FC<KeycloakWrapperProps> = ({ children }) => {
     <ReactKeycloakProvider
       authClient={keycloak}
       initOptions={initOptions}
-      LoadingComponent={<LoadingComponent />}
+      LoadingComponent={<Loader />}
       onEvent={handleKeycloakEvent}
     >
       {children}

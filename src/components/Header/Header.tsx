@@ -1,19 +1,18 @@
-import React, { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { Layout, Menu, Avatar, Dropdown, Space, Typography, Button, Drawer } from 'antd'
 import {
+  ExperimentOutlined,
   HomeOutlined,
-  UserOutlined,
-  ProjectOutlined,
   LogoutOutlined,
-  SettingOutlined,
   MenuOutlined,
   PlusOutlined,
-  ExperimentOutlined,
-  BookOutlined
+  ProjectOutlined,
+  SettingOutlined,
+  UserOutlined
 } from '@ant-design/icons'
-import { useAuth } from '../../hooks/useAuth'
+import { Avatar, Button, Drawer, Dropdown, Layout, Menu, Space, Typography } from 'antd'
+import React, { useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import path from '../../constants/path'
+import { useAuth } from '../../hooks/useAuth'
 
 const { Header: AntHeader } = Layout
 const { Text } = Typography
@@ -31,9 +30,6 @@ const Header: React.FC = () => {
         break
       case 'profile':
         navigate('/profile')
-        break
-      case 'saved-slides':
-        navigate(path.savedSlides)
         break
       case 'logout':
         logout()
@@ -65,11 +61,6 @@ const Header: React.FC = () => {
     // Only show profile and saved slides menu items for authenticated users
     ...(isAuthenticated
       ? [
-          {
-            key: 'saved-slides',
-            icon: <BookOutlined />,
-            label: 'Saved Slides'
-          },
           {
             key: 'profile',
             icon: <UserOutlined />,
@@ -107,11 +98,9 @@ const Header: React.FC = () => {
       ? ['home']
       : currentPath === path.profile
         ? ['profile']
-        : currentPath === path.savedSlides
-          ? ['saved-slides']
-          : currentPath === path.slideGeneratorDemo
-            ? ['slide-generator-demo']
-            : []
+        : currentPath === path.slideGeneratorDemo
+          ? ['slide-generator-demo']
+          : []
 
   return (
     <AntHeader

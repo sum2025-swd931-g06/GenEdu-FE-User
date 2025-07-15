@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { Card, Button, Typography, Space, Spin } from 'antd'
 import { LoginOutlined, UserOutlined } from '@ant-design/icons'
-import { useAuth } from '../../hooks/useAuth'
+import { Button, Card, Space, Typography } from 'antd'
+import React, { useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
+import Loader from '../../components/Loader'
+import { useAuth } from '../../hooks/useAuth'
 
 const { Title, Text } = Typography
 
@@ -37,8 +38,7 @@ const Login: React.FC = () => {
             gap: '16px'
           }}
         >
-          <Spin size='large' />
-          <Text>Checking authentication...</Text>
+          <Loader />
         </div>
       </Layout>
     )
@@ -81,10 +81,10 @@ const Login: React.FC = () => {
               onClick={handleKeycloakLogin}
               style={{ height: '48px', fontSize: '16px' }}
             >
-              Sign in with Keycloak
+              Sign in here
             </Button>
 
-            <div style={{ padding: '16px', backgroundColor: '#f6f6f6', borderRadius: '8px' }}>
+            {/* <div style={{ padding: '16px', backgroundColor: '#f6f6f6', borderRadius: '8px' }}>
               <Text strong style={{ display: 'block', marginBottom: '8px' }}>
                 Secure Authentication
               </Text>
@@ -97,7 +97,7 @@ const Login: React.FC = () => {
 
             <Text type='secondary' style={{ fontSize: '14px' }}>
               Don't have an account? Contact your administrator to get access.
-            </Text>
+            </Text> */}
           </Space>
         </Card>
       </div>

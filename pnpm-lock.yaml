@@ -68,6 +68,9 @@ importers:
       scss:
         specifier: ^0.2.4
         version: 0.2.4
+      styled-components:
+        specifier: ^6.1.19
+        version: 6.1.19(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       tailwindcss:
         specifier: ^4.1.8
         version: 4.1.8

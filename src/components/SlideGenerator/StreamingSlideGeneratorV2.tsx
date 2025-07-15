@@ -882,85 +882,6 @@ const StreamingSlideGeneratorV2: React.FC = () => {
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
-      {/* Workflow Steps */}
-      <Card title='Slide Generation Workflow' style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px' }}>
-          {/* Step 1: Create Project */}
-          <div
-            style={{
-              padding: '12px 16px',
-              borderRadius: '6px',
-              backgroundColor: projectId ? '#f6ffed' : '#e6f7ff',
-              border: `1px solid ${projectId ? '#b7eb8f' : '#91d5ff'}`,
-              flex: 1
-            }}
-          >
-            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
-              Step 1: Create Project {projectId && '✓'}
-            </div>
-            <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
-              {projectId ? `Project ID: ${projectId}` : 'Set up your project details'}
-            </div>
-            {!projectId && (
-              <Text type='secondary' style={{ fontSize: '11px' }}>
-                Fill the form below and click "Create Project"
-              </Text>
-            )}
-          </div>
-
-          {/* Step 2: Upload File (Optional) */}
-          <div
-            style={{
-              padding: '12px 16px',
-              borderRadius: '6px',
-              backgroundColor: file ? '#f6ffed' : projectId ? '#fffbe6' : '#f5f5f5',
-              border: `1px solid ${file ? '#b7eb8f' : projectId ? '#ffe58f' : '#d9d9d9'}`,
-              flex: 1
-            }}
-          >
-            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
-              Step 2: Upload File (Optional) {file && '✓'}
-            </div>
-            <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
-              {file ? `File: ${file.mediaFile.name}` : 'Upload lesson plan file'}
-            </div>
-            {!file && projectId && (
-              <Text type='secondary' style={{ fontSize: '11px' }}>
-                Upload a .md file to enhance generation
-              </Text>
-            )}
-          </div>
-
-          {/* Step 3: Generate Slides */}
-          <div
-            style={{
-              padding: '12px 16px',
-              borderRadius: '6px',
-              backgroundColor: streamSlides.length > 0 ? '#f6ffed' : projectId ? '#e6f7ff' : '#f5f5f5',
-              border: `1px solid ${streamSlides.length > 0 ? '#b7eb8f' : projectId ? '#91d5ff' : '#d9d9d9'}`,
-              flex: 1
-            }}
-          >
-            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
-              Step 3: Generate Slides {streamSlides.length > 0 && '✓'}
-            </div>
-            <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
-              {streamSlides.length > 0 ? `Generated ${streamSlides.length} slides` : 'Generate AI slides'}
-            </div>
-            {projectId && streamSlides.length === 0 && (
-              <Button
-                type='primary'
-                size='small'
-                onClick={handleGenerateSlides}
-                loading={isStreaming}
-                disabled={isStreaming}
-              >
-                {isStreaming ? 'Generating...' : 'Generate Slides'}
-              </Button>
-            )}
-          </div>
-        </div>
-      </Card>
       <Tabs defaultActiveKey='generator' type='card'>
         {' '}
         <TabPane tab='Slide Generator' key='generator'>
@@ -975,7 +896,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
         </TabPane>
         {/* Add new tab for Reveal.js presentation */}
         {/* Update the TabPane section in StreamingSlideGeneratorV2.tsx */}
-        <TabPane tab={`Reveal.js Presentation (${streamSlides.length})`} key='reveal-presentation'>
+        <TabPane tab={`Slide Preview (${streamSlides.length})`} key='reveal-presentation'>
           {streamSlides.length > 0 ? (
             <Card
               title={`Generated Presentation (${streamSlides.length} slides)`}
@@ -984,41 +905,10 @@ const StreamingSlideGeneratorV2: React.FC = () => {
                   <Button type='primary' onClick={() => setShowRevealPresentation(!showRevealPresentation)}>
                     {showRevealPresentation ? 'Hide' : 'Show'} Presentation
                   </Button>
-                  <Button icon={<SaveOutlined />} onClick={saveSlides} type='primary'>
+                  <Button icon={<SaveOutlined />} onClick={saveSlides} type='default'>
                     Save Presentation
                   </Button>
-                  {/* Add quick server save button */}
-                  {projectId && (
-                    <Button
-                      icon={<CloudUploadOutlined />}
-                      onClick={async () => {
-                        try {
-                          setSaving(true)
-                          const title = `${generationParams?.topic || initialTopic || 'Generated Slides'} - ${new Date().toLocaleDateString()}`
-                          await saveToServer(title, streamSlides)
-
-                          notification.success({
-                            message: 'Quick Save Successful!',
-                            description: `"${title}" has been saved to the server.`,
-                            duration: 4
-                          })
-                        } catch (error) {
-                          console.error('Quick save failed:', error)
-                          notification.error({
-                            message: 'Quick Save Failed',
-                            description: 'Failed to save to server. Use the detailed save option instead.'
-                          })
-                        } finally {
-                          setSaving(false)
-                        }
-                      }}
-                      loading={saving}
-                      type='default'
-                    >
-                      Quick Save to Server
-                    </Button>
-                  )}
-                  <Button icon={<ClearOutlined />} onClick={() => setStreamSlides([])}>
+                  <Button type='dashed' icon={<ClearOutlined />} onClick={() => setStreamSlides([])}>
                     Clear
                   </Button>
                 </Space>
@@ -1071,10 +961,6 @@ const StreamingSlideGeneratorV2: React.FC = () => {
                 </>
               ) : (
                 <div style={{ padding: '20px', textAlign: 'center' }}>
-                  <Button type='primary' size='large' onClick={() => setShowRevealPresentation(true)}>
-                    Start Presentation
-                  </Button>
-
                   {/* Enhanced Preview of slides */}
                   <div style={{ marginTop: '20px', textAlign: 'left' }}>
                     <h4>Slide Preview:</h4>
@@ -1136,9 +1022,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
           ) : (
             <Card>
               <div style={{ textAlign: 'center', padding: '48px 0' }}>
-                <Text type='secondary'>
-                  No slides generated yet. Generate slides to see the Reveal.js presentation.
-                </Text>
+                <Text type='secondary'>No slides generated yet. Generate slides to see the slide preview.</Text>
               </div>
             </Card>
           )}
@@ -1246,7 +1130,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
           </Card>
         </TabPane>
       </Tabs>{' '}
-      <Card title='Lesson Plan File Upload' style={{ marginBottom: 24 }}>
+      <Card title='Lesson Plan File Upload' style={{ marginBottom: 24, marginTop: 24 }}>
         <Space direction='vertical' style={{ width: '100%' }}>
           <div style={{ marginBottom: '16px' }}>
             <Text>Upload a lesson plan file (Markdown) to enhance slide generation:</Text>
@@ -1305,6 +1189,85 @@ const StreamingSlideGeneratorV2: React.FC = () => {
             </Text>
           </div>
         </Space>
+      </Card>
+      {/* Workflow Steps */}
+      <Card title='Slide Generation Workflow' style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '16px' }}>
+          {/* Step 1: Create Project */}
+          <div
+            style={{
+              padding: '12px 16px',
+              borderRadius: '6px',
+              backgroundColor: projectId ? '#f6ffed' : '#e6f7ff',
+              border: `1px solid ${projectId ? '#b7eb8f' : '#91d5ff'}`,
+              flex: 1
+            }}
+          >
+            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
+              Step 1: Create Project {projectId && '✓'}
+            </div>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+              {projectId ? `Project ID: ${projectId}` : 'Set up your project details'}
+            </div>
+            {!projectId && (
+              <Text type='secondary' style={{ fontSize: '11px' }}>
+                Fill the form below and click "Create Project"
+              </Text>
+            )}
+          </div>
+
+          {/* Step 2: Upload File (Optional) */}
+          <div
+            style={{
+              padding: '12px 16px',
+              borderRadius: '6px',
+              backgroundColor: file ? '#f6ffed' : projectId ? '#fffbe6' : '#f5f5f5',
+              border: `1px solid ${file ? '#b7eb8f' : projectId ? '#ffe58f' : '#d9d9d9'}`,
+              flex: 1
+            }}
+          >
+            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
+              Step 2: Upload File {file && '✓'}
+            </div>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+              {file ? `File: ${file.mediaFile.name}` : 'Upload lesson plan file'}
+            </div>
+            {!file && projectId && (
+              <Text type='secondary' style={{ fontSize: '11px' }}>
+                Upload a .md file to enhance generation
+              </Text>
+            )}
+          </div>
+
+          {/* Step 3: Generate Slides */}
+          <div
+            style={{
+              padding: '12px 16px',
+              borderRadius: '6px',
+              backgroundColor: streamSlides.length > 0 ? '#f6ffed' : projectId ? '#e6f7ff' : '#f5f5f5',
+              border: `1px solid ${streamSlides.length > 0 ? '#b7eb8f' : projectId ? '#91d5ff' : '#d9d9d9'}`,
+              flex: 1
+            }}
+          >
+            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
+              Step 3: Generate Slides {streamSlides.length > 0 && '✓'}
+            </div>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+              {streamSlides.length > 0 ? `Generated ${streamSlides.length} slides` : 'Generate AI slides'}
+            </div>
+            {projectId && streamSlides.length === 0 && (
+              <Button
+                type='primary'
+                size='middle'
+                onClick={handleGenerateSlides}
+                loading={isStreaming}
+                disabled={isStreaming}
+              >
+                {isStreaming ? 'Generating...' : 'Generate Slides'}
+              </Button>
+            )}
+          </div>
+        </div>
       </Card>
       {/* Generation Progress (Fixed at bottom when streaming) */}
       {isStreaming && (

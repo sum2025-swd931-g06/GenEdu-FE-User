@@ -1,5 +1,5 @@
-import { BookOutlined, NumberOutlined } from '@ant-design/icons'
-import { Button, Card, Col, Divider, Form, Input, InputNumber, Row, Select, Space, Typography } from 'antd'
+import { BookOutlined } from '@ant-design/icons'
+import { Button, Card, Col, Divider, Form, Input, Row, Select, Space, Typography } from 'antd'
 import React, { useEffect } from 'react'
 import { Lesson } from '../../types/lesson.type'
 
@@ -104,7 +104,6 @@ const SlideGeneratorForm: React.FC<SlideGeneratorFormProps> = ({
           <span>AI Slide Generator</span>
         </Space>
       }
-      style={{ marginBottom: 24 }}
     >
       <Form
         form={form}
@@ -143,14 +142,14 @@ const SlideGeneratorForm: React.FC<SlideGeneratorFormProps> = ({
               <TextArea placeholder='Provide more details about the specific aspects you want to cover...' rows={3} />
             </Form.Item>
 
-            <Form.Item
+            {/* <Form.Item
               name='slideCount'
               label='Number of Slides'
               rules={[{ required: true, message: 'Please specify slide count!' }]}
               tooltip='How many slides you want to generate (recommended: 6-12)'
             >
               <InputNumber min={3} max={20} size='large' style={{ width: '100%' }} prefix={<NumberOutlined />} />
-            </Form.Item>
+            </Form.Item> */}
           </Col>
 
           {/* Advanced Options */}
@@ -196,8 +195,8 @@ const SlideGeneratorForm: React.FC<SlideGeneratorFormProps> = ({
               {loading ? 'Processing...' : buttonText}
             </Button>
 
-            <Button onClick={handleReset} disabled={loading}>
-              Reset Form
+            <Button onClick={handleReset} disabled={loading || disabled} size='large'>
+              Cancel
             </Button>
           </Space>
         </Form.Item>

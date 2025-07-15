@@ -2,7 +2,6 @@ import type { AuthClientError } from '@react-keycloak/core'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
-import SavedSlidesManager from './components/SavedSlides/SavedSlidesManager'
 import { StreamingSlideGeneratorV2 } from './components/SlideGenerator'
 import path from './constants/path'
 import { AuthProvider } from './contexts/AuthContext'
@@ -100,17 +99,6 @@ const AppRoutes: React.FC = () => {
         />
 
         {/* Slide Layout Assignment Demo Route */}
-
-        <Route
-          path='/saved-slides'
-          element={
-            <Layout>
-              <ProtectedRoute>
-                <SavedSlidesManager />
-              </ProtectedRoute>
-            </Layout>
-          }
-        />
 
         {/* Keycloak auth routes */}
         <Route path='/login' element={<Login />} />

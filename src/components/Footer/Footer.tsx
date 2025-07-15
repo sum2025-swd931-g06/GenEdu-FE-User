@@ -89,7 +89,7 @@ const Footer: React.FC = () => {
             </Space>
             <Space>
               <EnvironmentOutlined style={{ color: '#ccc' }} />
-              <Text style={{ color: '#ccc' }}>San Francisco, CA</Text>
+              <Text style={{ color: '#ccc' }}>Ho Chi Minh City, Vietnam</Text>
             </Space>
           </Space>
         </Col>

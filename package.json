@@ -31,6 +31,7 @@
     "react-router-dom": "^7.6.0",
     "reveal.js": "^5.2.1",
     "scss": "^0.2.4",
+    "styled-components": "^6.1.19",
     "tailwindcss": "^4.1.8",
     "yup": "^1.2.0"
   },

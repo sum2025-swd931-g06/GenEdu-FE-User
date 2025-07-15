@@ -6,7 +6,6 @@ const path = {
   profile: '/profile',
   projectDetail: '/project/:id',
   slideGeneratorDemo: '/slide-generator-demo',
-  savedSlides: '/saved-slides',
   videoPlayer: '/video/:projectId',
   presentation: '/presentation',
   settings: '/settings',

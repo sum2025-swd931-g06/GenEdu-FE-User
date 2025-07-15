@@ -2,6 +2,7 @@ import { Component, ReactNode } from 'react'
 import { ReactKeycloakProvider } from '@react-keycloak/web'
 import type { AuthClientError, AuthClientEvent } from '@react-keycloak/core'
 import keycloak from './index'
+import Loader from '../../components/Loader'
 
 const initOptions = {
   onLoad: 'check-sso' as const,
@@ -78,8 +79,7 @@ class KeycloakProviderWithInit extends Component<KeycloakProviderWithInitProps, 
               gap: '16px'
             }}
           >
-            <div>Loading authentication...</div>
-            <div style={{ fontSize: '14px', color: '#666' }}>Connecting to Keycloak server...</div>
+            <Loader />
           </div>
         }
       >

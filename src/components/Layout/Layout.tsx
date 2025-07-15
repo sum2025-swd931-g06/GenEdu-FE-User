@@ -1,8 +1,9 @@
+import { Layout as AntLayout } from 'antd'
 import React from 'react'
-import { Layout as AntLayout, Spin } from 'antd'
-import Header from '../Header'
-import Footer from '../Footer'
 import { useAuth } from '../../hooks/useAuth'
+import Footer from '../Footer'
+import Header from '../Header'
+import Loader from '../Loader'
 
 const { Content } = AntLayout
 
@@ -17,21 +18,7 @@ const Layout: React.FC<LayoutProps> = ({ children, showHeader = true, showFooter
   const { isLoading } = useAuth()
 
   if (isLoading) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          flexDirection: 'column',
-          gap: '16px'
-        }}
-      >
-        <Spin size='large' />
-        <div>Loading GenEdu...</div>
-      </div>
-    )
+    return <Loader />
   }
 
   return (
