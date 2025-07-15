@@ -2,11 +2,6 @@
 import React from 'react'
 import { TypedSlideData } from '../../types/slideStream.type'
 
-interface SlideProps {
-  slideData: TypedSlideData
-  slideNumber: number
-}
-
 export const WelcomeSlide: React.FC<{ slideData: Extract<TypedSlideData, { type: 'welcome' }> }> = ({ slideData }) => (
   <section className='welcome-slide'>
     <div className='slide-content'>

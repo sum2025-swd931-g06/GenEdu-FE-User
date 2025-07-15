@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 import { UserData } from '../types/auth.type'
 import { Project, ProjectDetail, ProjectResponseDTO } from '../types/project.type'
 

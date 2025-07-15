@@ -1,4 +1,3 @@
-import axios from 'axios'
 import { UserData } from '../types/auth.type'
 import { Project, ProjectDetail, ProjectResponseDTO } from '../types/project.type'
 import api from './api.config'
@@ -11,7 +10,7 @@ export const userAPI = {
 }
 // Project API
 export const projectAPI = {
-  getAllProjectOfUser: (): Promise<ProjectResponseDTO[]> => api.get(`/projects/me`).then((res) => res.data),
+  getAllProjectOfUser: (): Promise<ProjectResponseDTO[]> => api.get(`/projects/my-projects`).then((res) => res.data),
 
   getById: (id: string): Promise<ProjectDetail> => api.get(`/projects/${id}`).then((res) => res.data),
 

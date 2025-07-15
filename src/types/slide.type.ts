@@ -26,6 +26,8 @@ export interface SlideGenerationParams {
   projectId?: string
   complexity?: string
   includeImages?: boolean
+  description?: string
+  lesson?: unknown // Use unknown instead of any for better type safety
 }
 
 export interface GeneratedSlide {

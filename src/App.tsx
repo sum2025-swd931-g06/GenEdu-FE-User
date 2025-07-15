@@ -4,7 +4,6 @@ import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import SavedSlidesManager from './components/SavedSlides/SavedSlidesManager'
 import { StreamingSlideGeneratorV2 } from './components/SlideGenerator'
-import SlideLayoutDemo from './components/SlideGenerator/SlideLayoutDemo'
 import path from './constants/path'
 import { AuthProvider } from './contexts/AuthContext'
 import ThemeProvider from './contexts/ThemeContext'
@@ -101,16 +100,6 @@ const AppRoutes: React.FC = () => {
         />
 
         {/* Slide Layout Assignment Demo Route */}
-        <Route
-          path='/slide-layout-demo'
-          element={
-            <Layout>
-              <ProtectedRoute>
-                <SlideLayoutDemo />
-              </ProtectedRoute>
-            </Layout>
-          }
-        />
 
         <Route
           path='/saved-slides'
