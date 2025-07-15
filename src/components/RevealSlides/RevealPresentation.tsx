@@ -101,7 +101,7 @@ const RevealPresentation: React.FC<RevealPresentationProps> = ({
       case 'thanks':
         return <ThanksSlide key={index} slideData={slideData} />
       default:
-        return <ContentSlide key={index} slideData={slideData as any} />
+        return <ContentSlide key={index} slideData={slideData as Extract<TypedSlideData, { type: 'content' }>} />
     }
   }
 
@@ -109,14 +109,34 @@ const RevealPresentation: React.FC<RevealPresentationProps> = ({
     <div
       ref={containerRef}
       className='reveal-container'
-      style={{
-        height: typeof height === 'number' ? `${height}px` : height,
-        position: 'relative',
-        overflow: 'hidden'
-      }}
+      style={
+        {
+          height: typeof height === 'number' ? `${height}px` : height,
+          position: 'relative',
+          overflow: 'hidden',
+          backgroundColor: '#ffffff',
+          // Override Reveal.js CSS variables locally
+          '--r-background-color': '#ffffff',
+          '--r-main-color': '#000000',
+          '--r-heading-color': '#000000'
+        } as React.CSSProperties
+      }
     >
-      <div className='reveal' ref={deckRef}>
-        <div className='slides'>{slides.map((slide, index) => renderSlide(slide, index))}</div>
+      <div
+        className='reveal'
+        ref={deckRef}
+        style={{
+          backgroundColor: '#ffffff'
+        }}
+      >
+        <div
+          className='slides'
+          style={{
+            backgroundColor: '#ffffff'
+          }}
+        >
+          {slides.map((slide, index) => renderSlide(slide, index))}
+        </div>
       </div>
     </div>
   )

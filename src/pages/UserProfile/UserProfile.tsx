@@ -186,14 +186,14 @@ const UserProfile: React.FC = () => {
                     <Button type='link' icon={<EyeOutlined />} onClick={() => handleViewProject(project.id)} key='view'>
                       View
                     </Button>,
-                    <Button
-                      type='link'
-                      icon={<FileTextOutlined />}
-                      onClick={() => handleEditProject(project.id)}
-                      key='edit'
-                    >
-                      Edit
-                    </Button>,
+                    // <Button
+                    //   type='link'
+                    //   icon={<FileTextOutlined />}
+                    //   onClick={() => handleEditProject(project.id)}
+                    //   key='edit'
+                    // >
+                    //   Edit
+                    // </Button>,
                     <Button
                       type='link'
                       icon={<PlayCircleOutlined />}

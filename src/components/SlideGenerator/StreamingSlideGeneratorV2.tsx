@@ -960,55 +960,191 @@ const StreamingSlideGeneratorV2: React.FC = () => {
                   )}
                 </>
               ) : (
-                <div style={{ padding: '20px', textAlign: 'center' }}>
-                  {/* Enhanced Preview of slides */}
+                <div style={{ padding: '20px', textAlign: 'center' }} className='slide-preview-container'>
+                  {/* Enhanced Light Theme Preview of slides */}
                   <div style={{ marginTop: '20px', textAlign: 'left' }}>
-                    <h4>Slide Preview:</h4>
-                    <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                    <h4 style={{ color: '#2c3e50', marginBottom: '16px' }}>Slide Preview:</h4>
+                    <div style={{ maxHeight: '400px', overflowY: 'auto', padding: '4px' }}>
                       {streamSlides.map((slide, index) => (
                         <div
                           key={index}
                           style={{
-                            padding: '12px',
+                            padding: '16px',
                             margin: '8px 0',
-                            border: '1px solid #e8e8e8',
-                            borderRadius: '6px',
-                            backgroundColor: '#fafafa'
+                            border: '1px solid #e1e8ed',
+                            borderRadius: '8px',
+                            backgroundColor: '#ffffff',
+                            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                            transition: 'box-shadow 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)'
                           }}
                         >
-                          <div style={{ marginBottom: '8px' }}>
-                            <strong>
-                              Slide {index + 1} ({slide.type}):
-                            </strong>{' '}
-                            {slide.title}
+                          <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span
+                              style={{
+                                fontSize: '10px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: '#f0f9ff',
+                                color: '#0369a1',
+                                fontWeight: '500'
+                              }}
+                            >
+                              {slide.type.toUpperCase()}
+                            </span>
+                            <strong style={{ color: '#1f2937', fontSize: '14px' }}>
+                              Slide {index + 1}: {slide.title}
+                            </strong>
                           </div>
 
                           {/* Show preview content based on type */}
-                          {slide.type === 'content' && (
-                            <div style={{ fontSize: '12px', color: '#666', lineHeight: '1.4' }}>
-                              {slide.data.body.substring(0, 150)}
-                              {slide.data.body.length > 150 ? '...' : ''}
-                            </div>
-                          )}
-
-                          {slide.type === 'list' && (
-                            <div style={{ fontSize: '12px', color: '#666' }}>
-                              <div>Items: {slide.data.items.length}</div>
-                              <div>
-                                • {slide.data.items[0]?.substring(0, 100)}
-                                {slide.data.items[0]?.length > 100 ? '...' : ''}
+                          <div style={{ marginBottom: '12px' }}>
+                            {slide.type === 'content' && (
+                              <div
+                                style={{
+                                  fontSize: '13px',
+                                  color: '#4b5563',
+                                  lineHeight: '1.5',
+                                  backgroundColor: '#f8fafc',
+                                  padding: '8px',
+                                  borderRadius: '4px',
+                                  borderLeft: '3px solid #3b82f6'
+                                }}
+                              >
+                                {slide.data.body.substring(0, 150)}
+                                {slide.data.body.length > 150 ? '...' : ''}
                               </div>
-                              {slide.data.items.length > 1 && <div>• ...</div>}
-                            </div>
-                          )}
+                            )}
 
-                          {slide.type === 'compare' && (
-                            <div style={{ fontSize: '12px', color: '#666' }}>
-                              <div>
-                                {slide.data.left_header} vs {slide.data.right_header}
+                            {slide.type === 'list' && (
+                              <div
+                                style={{
+                                  fontSize: '13px',
+                                  color: '#4b5563',
+                                  backgroundColor: '#f0fdf4',
+                                  padding: '8px',
+                                  borderRadius: '4px',
+                                  borderLeft: '3px solid #10b981'
+                                }}
+                              >
+                                <div style={{ fontWeight: '500', marginBottom: '4px' }}>
+                                  Items: {slide.data.items.length}
+                                </div>
+                                <div style={{ paddingLeft: '8px' }}>
+                                  • {slide.data.items[0]?.substring(0, 100)}
+                                  {slide.data.items[0]?.length > 100 ? '...' : ''}
+                                </div>
+                                {slide.data.items.length > 1 && (
+                                  <div style={{ paddingLeft: '8px', color: '#6b7280' }}>
+                                    • ... and {slide.data.items.length - 1} more items
+                                  </div>
+                                )}
                               </div>
-                              <div>
-                                {slide.data.left_points.length} vs {slide.data.right_points.length} points
+                            )}
+
+                            {slide.type === 'compare' && (
+                              <div
+                                style={{
+                                  fontSize: '13px',
+                                  color: '#4b5563',
+                                  backgroundColor: '#fef7ec',
+                                  padding: '8px',
+                                  borderRadius: '4px',
+                                  borderLeft: '3px solid #f59e0b'
+                                }}
+                              >
+                                <div style={{ fontWeight: '500', marginBottom: '4px' }}>
+                                  {slide.data.left_header} vs {slide.data.right_header}
+                                </div>
+                                <div style={{ display: 'flex', gap: '16px', fontSize: '12px' }}>
+                                  <span style={{ color: '#059669' }}>{slide.data.left_points.length} points</span>
+                                  <span style={{ color: '#dc2626' }}>{slide.data.right_points.length} points</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {slide.type === 'welcome' && (
+                              <div
+                                style={{
+                                  fontSize: '13px',
+                                  color: '#4b5563',
+                                  backgroundColor: '#f3f4f6',
+                                  padding: '8px',
+                                  borderRadius: '4px',
+                                  borderLeft: '3px solid #6b7280'
+                                }}
+                              >
+                                <div style={{ fontStyle: 'italic' }}>{slide.data.subtitle}</div>
+                              </div>
+                            )}
+
+                            {slide.type === 'thanks' && (
+                              <div
+                                style={{
+                                  fontSize: '13px',
+                                  color: '#4b5563',
+                                  backgroundColor: '#ecfdf5',
+                                  padding: '8px',
+                                  borderRadius: '4px',
+                                  borderLeft: '3px solid #22c55e'
+                                }}
+                              >
+                                <div style={{ fontStyle: 'italic' }}>{slide.data.message}</div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Narration Script Section */}
+                          {slide.narrationScript && (
+                            <div
+                              style={{
+                                marginTop: '12px',
+                                padding: '10px',
+                                backgroundColor: '#fef3e2',
+                                borderRadius: '6px',
+                                border: '1px solid #fed7aa',
+                                borderLeft: '4px solid #f97316'
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  marginBottom: '6px'
+                                }}
+                              >
+                                <span style={{ fontSize: '14px' }}>🎙️</span>
+                                <span
+                                  style={{
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: '#ea580c',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
+                                  }}
+                                >
+                                  Narration Script
+                                </span>
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: '12px',
+                                  lineHeight: '1.5',
+                                  color: '#7c2d12',
+                                  fontStyle: 'italic',
+                                  backgroundColor: '#fff7ed',
+                                  padding: '8px',
+                                  borderRadius: '4px',
+                                  border: '1px solid #fed7aa'
+                                }}
+                              >
+                                "{slide.narrationScript}"
                               </div>
                             </div>
                           )}

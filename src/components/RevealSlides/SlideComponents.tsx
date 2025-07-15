@@ -8,9 +8,6 @@ export const WelcomeSlide: React.FC<{ slideData: Extract<TypedSlideData, { type:
       <h1 className='slide-title'>{slideData.title}</h1>
       <h2 className='slide-subtitle'>{slideData.data.subtitle}</h2>
     </div>
-    <div className='narration' style={{ display: 'none' }}>
-      {slideData.narrationScript}
-    </div>
   </section>
 )
 
@@ -21,9 +18,6 @@ export const ContentSlide: React.FC<{ slideData: Extract<TypedSlideData, { type:
       <div className='slide-body'>
         <p>{slideData.data.body}</p>
       </div>
-    </div>
-    <div className='narration' style={{ display: 'none' }}>
-      {slideData.narrationScript}
     </div>
   </section>
 )
@@ -39,9 +33,6 @@ export const ListSlide: React.FC<{ slideData: Extract<TypedSlideData, { type: 'l
           </li>
         ))}
       </ul>
-    </div>
-    <div className='narration' style={{ display: 'none' }}>
-      {slideData.narrationScript}
     </div>
   </section>
 )
@@ -76,9 +67,6 @@ export const CompareSlide: React.FC<{ slideData: Extract<TypedSlideData, { type:
         </div>
       </div>
     </div>
-    <div className='narration' style={{ display: 'none' }}>
-      {slideData.narrationScript}
-    </div>
   </section>
 )
 
@@ -87,9 +75,6 @@ export const ThanksSlide: React.FC<{ slideData: Extract<TypedSlideData, { type: 
     <div className='slide-content'>
       <h1 className='slide-title'>{slideData.title}</h1>
       <h2 className='slide-message'>{slideData.data.message}</h2>
-    </div>
-    <div className='narration' style={{ display: 'none' }}>
-      {slideData.narrationScript}
     </div>
   </section>
 )
