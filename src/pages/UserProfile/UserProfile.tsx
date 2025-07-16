@@ -135,10 +135,10 @@ const UserProfile: React.FC = () => {
     navigate(`/project/${projectId}`)
   }
 
-  const handleEditProject = (projectId: string) => {
-    // Navigate to slide generator with the project loaded for editing
-    navigate(`/slide-generator-demo?edit=${projectId}`)
-  }
+  //const handleEditProject = (projectId: string) => {
+  // Navigate to slide generator with the project loaded for editing
+  //  navigate(`/slide-generator-demo?edit=${projectId}`)
+  //}
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>

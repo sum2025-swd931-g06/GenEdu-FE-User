@@ -758,7 +758,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
       localStorage.setItem('genedu_draft_projects', JSON.stringify(existingProjects))
 
       // If user wants to save to server and we have a projectId
-      if (values.saveToServer && projectId) {
+      if (projectId) {
         try {
           await saveToServer(values.title, streamSlides)
 
@@ -1391,7 +1391,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
             <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
               {streamSlides.length > 0 ? `Generated ${streamSlides.length} slides` : 'Generate AI slides'}
             </div>
-            {projectId && streamSlides.length === 0 && (
+            {file && projectId && streamSlides.length === 0 && (
               <Button
                 type='primary'
                 size='middle'
@@ -1453,25 +1453,6 @@ const StreamingSlideGeneratorV2: React.FC = () => {
 
           <Form.Item name='description' label='Description (Optional)'>
             <Input.TextArea rows={3} placeholder='Brief description of your presentation content' />
-          </Form.Item>
-
-          {/* Add server save option */}
-          <Form.Item name='saveToServer' valuePropName='checked' label='Save Options'>
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                <input
-                  type='checkbox'
-                  style={{ marginRight: '8px' }}
-                  onChange={(e) => saveForm.setFieldValue('saveToServer', e.target.checked)}
-                />
-                <span>Save to server (persist slides permanently)</span>
-              </label>
-              <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', marginLeft: '20px' }}>
-                {projectId
-                  ? '✓ Server save available with current project'
-                  : '⚠️ Server save requires an active project'}
-              </div>
-            </div>
           </Form.Item>
 
           {/* Preview Info */}
