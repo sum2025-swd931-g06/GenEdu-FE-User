@@ -1,5 +1,6 @@
 import type { AuthClientError } from '@react-keycloak/core'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import { StreamingSlideGeneratorV2 } from './components/SlideGenerator'
@@ -116,6 +117,9 @@ const AppRoutes: React.FC = () => {
           }
         />
       </Routes>
+
+      {/* React Hot Toast Container */}
+      <Toaster />
     </BrowserRouter>
   )
 }
