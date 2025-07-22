@@ -2,7 +2,6 @@ import axios from 'axios'
 
 const API_BASE_URL = 'https://genedu-gateway.lch.id.vn/api/v1'
 
-
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -51,9 +50,10 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       console.log('Token expired or invalid, clearing storage')
       localStorage.removeItem('token')
-      // You can also trigger a redirect to login page here if needed
-      // window.location.href = '/login'
     }
+
+    // Don't automatically show error toasts here - let components handle them
+    // This prevents double notifications when components manually handle errors
     return Promise.reject(error)
   }
 )

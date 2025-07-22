@@ -1,0 +1,213 @@
+/* Styled Reveal Presentation CSS */
+
+.styled-reveal-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  font-family: var(--template-body-font);
+}
+
+/* Override Reveal.js styles with template variables */
+.styled-reveal-container .reveal {
+  height: 100% !important;
+  font-family: var(--template-body-font) !important;
+  background-color: var(--template-background) !important;
+  color: var(--template-text) !important;
+}
+
+.styled-reveal-container .reveal .slides {
+  height: 100% !important;
+  background-color: var(--template-background) !important;
+}
+
+.styled-reveal-container .reveal .slides > section {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: var(--template-spacing) !important;
+  box-sizing: border-box !important;
+  border-radius: var(--template-border-radius) !important;
+}
+
+/* Template-specific slide styling */
+.templated-welcome-slide,
+.templated-thanks-slide {
+  position: relative;
+  overflow: hidden;
+}
+
+.templated-welcome-slide::before,
+.templated-thanks-slide::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: inherit;
+  opacity: 0.1;
+  z-index: -1;
+}
+
+.templated-content-slide,
+.templated-list-slide,
+.templated-compare-slide {
+  position: relative;
+}
+
+/* Responsive design for different screen sizes */
+@media (max-width: 768px) {
+  .styled-reveal-container .reveal .slides > section {
+    padding: 1em !important;
+  }
+  
+  .templated-welcome-slide h1,
+  .templated-thanks-slide h1 {
+    font-size: 2rem !important;
+  }
+  
+  .templated-welcome-slide h2,
+  .templated-thanks-slide h2 {
+    font-size: 1.2rem !important;
+  }
+  
+  .templated-content-slide h2,
+  .templated-list-slide h2,
+  .templated-compare-slide h2 {
+    font-size: 1.5rem !important;
+  }
+  
+  .comparison-container {
+    grid-template-columns: 1fr !important;
+    gap: 1em !important;
+  }
+  
+  .comparison-divider {
+    order: 2;
+    min-height: auto !important;
+  }
+  
+  .comparison-left {
+    order: 1;
+  }
+  
+  .comparison-right {
+    order: 3;
+  }
+}
+
+/* Animation effects */
+.styled-reveal-container .reveal .slides section.present {
+  animation: slideIn 0.6s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fragment animations */
+.styled-reveal-container .reveal .slides section .fragment {
+  opacity: 0.3;
+  transition: all 0.3s ease;
+}
+
+.styled-reveal-container .reveal .slides section .fragment.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Progress bar styling */
+.styled-reveal-container .reveal .progress {
+  background: rgba(0, 0, 0, 0.1);
+  height: 4px;
+}
+
+.styled-reveal-container .reveal .progress span {
+  background: var(--template-primary);
+  transition: width 0.3s ease;
+}
+
+/* Control styling */
+.styled-reveal-container .reveal .controls {
+  bottom: 20px;
+  right: 20px;
+}
+
+.styled-reveal-container .reveal .controls button {
+  background: var(--template-primary);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  margin: 0 5px;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+}
+
+.styled-reveal-container .reveal .controls button:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Custom scrollbar for slide content */
+.slide-body::-webkit-scrollbar,
+.slide-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.slide-body::-webkit-scrollbar-track,
+.slide-list::-webkit-scrollbar-track {
+  background: var(--template-background);
+}
+
+.slide-body::-webkit-scrollbar-thumb,
+.slide-list::-webkit-scrollbar-thumb {
+  background: var(--template-primary);
+  border-radius: 3px;
+}
+
+.slide-body::-webkit-scrollbar-thumb:hover,
+.slide-list::-webkit-scrollbar-thumb:hover {
+  background: var(--template-secondary);
+}
+
+/* Size variants */
+.styled-reveal-container[data-size="small"] .reveal .slides > section {
+  padding: 1em !important;
+}
+
+.styled-reveal-container[data-size="small"] .templated-welcome-slide h1,
+.styled-reveal-container[data-size="small"] .templated-thanks-slide h1 {
+  font-size: 1.8rem !important;
+}
+
+.styled-reveal-container[data-size="small"] .templated-content-slide h2,
+.styled-reveal-container[data-size="small"] .templated-list-slide h2,
+.styled-reveal-container[data-size="small"] .templated-compare-slide h2 {
+  font-size: 1.3rem !important;
+}
+
+.styled-reveal-container[data-size="large"] .reveal .slides > section {
+  padding: 2em !important;
+}
+
+.styled-reveal-container[data-size="large"] .templated-welcome-slide h1,
+.styled-reveal-container[data-size="large"] .templated-thanks-slide h1 {
+  font-size: 3rem !important;
+}
+
+.styled-reveal-container[data-size="large"] .templated-content-slide h2,
+.styled-reveal-container[data-size="large"] .templated-list-slide h2,
+.styled-reveal-container[data-size="large"] .templated-compare-slide h2 {
+  font-size: 2.5rem !important;
+}

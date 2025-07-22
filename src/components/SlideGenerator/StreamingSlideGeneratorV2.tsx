@@ -5,7 +5,9 @@ import {
   UploadOutlined,
   FileOutlined,
   DownloadOutlined,
-  CloudUploadOutlined
+  CloudUploadOutlined,
+  ExportOutlined,
+  BgColorsOutlined
 } from '@ant-design/icons'
 import {
   Button,
@@ -20,7 +22,8 @@ import {
   Tabs,
   Typography,
   Upload,
-  UploadProps
+  UploadProps,
+  Dropdown
 } from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -33,6 +36,12 @@ import RevealPresentation from '../RevealSlides/RevealPresentation'
 import SlideGeneratorForm, { SlideGenerationParams } from './SlideGeneratorForm'
 import { FileService, GeneratedFile } from '../../services/fileService'
 import { PowerPointGenerationOptions } from '../../utils/powerpointGenerator'
+import { PresentationExporter, ExportOptions } from '../../services/presentationExporter'
+import PresentationTemplates from './PresentationTemplates'
+import StyledRevealPresentation from './StyledRevealPresentation'
+import TemplatePreviewModal from './TemplatePreviewModal'
+import { PresentationTemplate, presentationTemplates } from './templateConstants'
+import { ErrorHandler } from '../../utils/errorHandler'
 
 // Add types for server API
 interface SlideContentRequest {
@@ -106,8 +115,87 @@ const StreamingSlideGeneratorV2: React.FC = () => {
 
   const [isFullscreen, setIsFullscreen] = useState(false)
 
+  // Template states
+  const [selectedTemplate, setSelectedTemplate] = useState<PresentationTemplate | null>(presentationTemplates[0])
+  const [previewTemplate, setPreviewTemplate] = useState<PresentationTemplate | null>(null)
+  const [templatePreviewVisible, setTemplatePreviewVisible] = useState(false)
+
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen)
+  }
+
+  // Template handlers
+  const handleTemplateSelect = (template: PresentationTemplate) => {
+    setSelectedTemplate(template)
+    ErrorHandler.handleSuccess(`${template.name} template has been applied to your presentation.`)
+  }
+
+  const handleTemplatePreview = (template: PresentationTemplate) => {
+    setPreviewTemplate(template)
+    setTemplatePreviewVisible(true)
+  }
+
+  const getSampleSlides = (): TypedSlideData[] => {
+    return [
+      {
+        type: 'welcome',
+        title: 'Sample Presentation',
+        data: { subtitle: 'Template Preview' },
+        narrationScript: 'Welcome to our sample presentation.'
+      },
+      {
+        type: 'content',
+        title: 'Content Slide',
+        data: {
+          body: 'This is how your content slides will look with this template. The styling includes proper typography, colors, and spacing.'
+        },
+        narrationScript: 'This slide demonstrates the content layout.'
+      },
+      {
+        type: 'list',
+        title: 'List Slide',
+        data: { items: ['First bullet point', 'Second bullet point', 'Third bullet point'] },
+        narrationScript: 'Here we show a list of items.'
+      },
+      {
+        type: 'thanks',
+        title: 'Thank You',
+        data: { message: 'Questions?' },
+        narrationScript: 'Thank you for your attention.'
+      }
+    ]
+  }
+
+  // Export functionality
+  const handleExportPresentation = async (format: 'json' | 'html' | 'pdf' | 'pptx') => {
+    if (streamSlides.length === 0) {
+      ErrorHandler.handleWarning('Please generate some slides first before exporting.')
+      return
+    }
+
+    if (!selectedTemplate) {
+      ErrorHandler.handleWarning('Please select a template before exporting.')
+      return
+    }
+
+    try {
+      const exportOptions: ExportOptions = {
+        format,
+        includeTemplate: true,
+        includeNarration: true,
+        fileName: `presentation-${Date.now()}.${format}`
+      }
+
+      const blob = await PresentationExporter.exportPresentation(streamSlides, selectedTemplate, exportOptions)
+
+      const fileName = exportOptions.fileName || `presentation.${format}`
+      PresentationExporter.downloadBlob(blob, fileName)
+
+      ErrorHandler.handleSuccess(`Your presentation has been exported as ${format.toUpperCase()} format.`)
+    } catch (error) {
+      console.error('Export failed:', error)
+      ErrorHandler.handleAPIError(error, 'There was an error exporting your presentation. Please try again.')
+    }
   }
 
   // All Lessons
@@ -120,12 +208,9 @@ const StreamingSlideGeneratorV2: React.FC = () => {
       setInitialTopic(topicFromUrl)
 
       // Show notification that topic was auto-filled
-      notification.info({
-        message: 'Topic Auto-filled',
-        description: `Topic "${topicFromUrl}" has been loaded from your search. You can modify it or start generation directly.`,
-        placement: 'topRight',
-        duration: 4
-      })
+      ErrorHandler.handleInfo(
+        `Topic "${topicFromUrl}" has been loaded from your search. You can modify it or start generation directly.`
+      )
     }
   }, [searchParams])
 
@@ -148,18 +233,12 @@ const StreamingSlideGeneratorV2: React.FC = () => {
 
   const handleFileUpload = async (projectId: string | null): Promise<UploadLessonPlanFileResponseDTO | void> => {
     if (!file || !file.mediaFile) {
-      notification.warning({
-        message: 'No File Selected',
-        description: 'Please select a file to upload.'
-      })
+      ErrorHandler.handleWarning('Please select a file to upload.')
       return
     }
 
     if (!projectId) {
-      notification.error({
-        message: 'No Project ID',
-        description: 'Please generate slides first to create a project.'
-      })
+      ErrorHandler.handleAPIError(new Error('No Project ID'), 'Please generate slides first to create a project.')
       return
     }
 
@@ -184,23 +263,17 @@ const StreamingSlideGeneratorV2: React.FC = () => {
       })
 
       if (response.status === 200) {
-        notification.success({
-          message: 'File Uploaded',
-          description: 'Your file has been uploaded successfully.'
-        })
+        ErrorHandler.handleSuccess('Your file has been uploaded successfully.')
         return response.data as UploadLessonPlanFileResponseDTO
       } else {
-        notification.error({
-          message: 'Upload Failed',
-          description: 'There was an error uploading your file. Please try again.'
-        })
+        ErrorHandler.handleAPIError(
+          new Error('Upload Failed'),
+          'There was an error uploading your file. Please try again.'
+        )
       }
     } catch (error) {
       console.error('Error uploading file:', error)
-      notification.error({
-        message: 'Upload Error',
-        description: 'An error occurred while uploading your file. Please try again.'
-      })
+      ErrorHandler.handleAPIError(error, 'An error occurred while uploading your file. Please try again.')
     } finally {
       setUploading(false)
       setUploadProgress(0)
@@ -223,22 +296,14 @@ const StreamingSlideGeneratorV2: React.FC = () => {
       if (response.status === 201) {
         const projectData = response.data
         setProjectId(projectData.id)
-        notification.success({
-          message: 'Project Created Successfully',
-          description: `Project "${projectData.title}" created! You can now upload a lesson plan file or generate slides directly.`,
-          placement: 'topRight',
-          duration: 4
-        })
+        ErrorHandler.handleSuccess(
+          `Project "${projectData.title}" created! You can now upload a lesson plan file or generate slides directly.`
+        )
         return projectData
       }
     } catch (error) {
       console.error('Error creating project:', error)
-      notification.error({
-        message: 'Project Creation Failed',
-        description: 'Failed to create project. Please try again.',
-        placement: 'topRight',
-        duration: 4
-      })
+      ErrorHandler.handleAPIError(error, 'Failed to create project. Please try again.')
       throw error
     }
   }
@@ -246,12 +311,10 @@ const StreamingSlideGeneratorV2: React.FC = () => {
   // Step 2: Generate Slides
   const handleGenerateSlides = async () => {
     if (!projectId || !generationParams) {
-      notification.error({
-        message: 'Missing Requirements',
-        description: 'Please create a project first before generating slides.',
-        placement: 'topRight',
-        duration: 4
-      })
+      ErrorHandler.handleAPIError(
+        new Error('Missing Requirements'),
+        'Please create a project first before generating slides.'
+      )
       return
     }
 
@@ -263,24 +326,14 @@ const StreamingSlideGeneratorV2: React.FC = () => {
       // Get auth token
       const token = getAuthToken()
       if (!token) {
-        notification.error({
-          message: 'Authentication Error',
-          description: 'Please log in to generate slides',
-          placement: 'topRight',
-          duration: 4
-        })
+        ErrorHandler.handleAPIError(new Error('Authentication Error'), 'Please log in to generate slides')
         return
       }
 
       const controller = new AbortController()
       formAbortControllerRef.current = controller
 
-      notification.info({
-        message: 'Starting Slide Generation',
-        description: 'Connecting to AI service to generate your slides...',
-        placement: 'topRight',
-        duration: 3
-      })
+      ErrorHandler.handleInfo('Starting Slide Generation - Connecting to AI service to generate your slides...')
 
       // Make the streaming request directly
       const response = await fetch(
@@ -325,47 +378,17 @@ const StreamingSlideGeneratorV2: React.FC = () => {
         // Handle as regular JSON response
         const jsonResponse = await response.json()
         console.log('JSON Response:', jsonResponse)
-        notification.success({
-          message: 'Slides Generated',
-          description: 'Slides have been generated successfully!',
-          placement: 'topRight',
-          duration: 4
-        })
+        ErrorHandler.handleSuccess('Slides have been generated successfully!')
       }
     } catch (error) {
       console.error('Error generating slides:', error)
 
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       const errorName = error instanceof Error ? error.name : ''
 
       if (errorName === 'AbortError') {
-        notification.info({
-          message: 'Generation Stopped',
-          description: 'Slide generation has been stopped by user',
-          placement: 'topRight',
-          duration: 3
-        })
-      } else if (errorMessage.includes('CORS')) {
-        notification.error({
-          message: 'CORS Error',
-          description: 'Backend server needs to allow requests from this domain. Please contact your administrator.',
-          placement: 'topRight',
-          duration: 5
-        })
-      } else if (errorMessage.includes('Failed to fetch')) {
-        notification.error({
-          message: 'Network Error',
-          description: 'Cannot connect to the backend server. Please check if the server is running and accessible.',
-          placement: 'topRight',
-          duration: 5
-        })
+        ErrorHandler.handleInfo('Slide generation has been stopped by user')
       } else {
-        notification.error({
-          message: 'Generation Error',
-          description: errorMessage || 'Failed to generate slides',
-          placement: 'topRight',
-          duration: 5
-        })
+        ErrorHandler.handleAPIError(error, 'Failed to generate slides')
       }
     } finally {
       setIsStreaming(false)
@@ -444,10 +467,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
             console.log('Generation complete event received')
             setProgress(100)
             setIsStreaming(false)
-            notification.success({
-              message: 'Generation Complete',
-              description: `All ${slideCount} slides have been generated successfully!`
-            })
+            ErrorHandler.handleSuccess(`All ${slideCount} slides have been generated successfully!`)
 
             // Auto-generate PowerPoint after successful completion
             setTimeout(() => {
@@ -463,10 +483,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
       } // If we reach here without explicit completion event
       setProgress(100)
       setIsStreaming(false)
-      notification.success({
-        message: 'Generation Complete',
-        description: `Generated ${slideCount} slides successfully!`
-      })
+      ErrorHandler.handleSuccess(`Generated ${slideCount} slides successfully!`)
 
       // Auto-generate PowerPoint after successful completion
       setTimeout(() => {
@@ -497,10 +514,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
   // PowerPoint generation functions
   const generatePowerPoint = async () => {
     if (streamSlides.length === 0) {
-      notification.warning({
-        message: 'No Slides to Convert',
-        description: 'Please generate some slides first before creating a PowerPoint.'
-      })
+      ErrorHandler.handleWarning('Please generate some slides first before creating a PowerPoint.')
       return
     }
 
@@ -518,16 +532,10 @@ const StreamingSlideGeneratorV2: React.FC = () => {
 
       setGeneratedFiles((prev) => [file, ...prev])
 
-      notification.success({
-        message: 'PowerPoint Generated',
-        description: `Successfully created ${file.filename}`
-      })
+      ErrorHandler.handleSuccess(`Successfully created ${file.filename}`)
     } catch (error) {
       console.error('PowerPoint generation failed:', error)
-      notification.error({
-        message: 'Generation Failed',
-        description: 'Failed to generate PowerPoint file. Please try again.'
-      })
+      ErrorHandler.handleAPIError(error, 'Failed to generate PowerPoint file. Please try again.')
     } finally {
       setPowerpointGenerating(false)
     }
@@ -539,20 +547,14 @@ const StreamingSlideGeneratorV2: React.FC = () => {
         if (blob) {
           FileService.downloadBlob(blob, file.filename)
 
-          notification.success({
-            message: 'Download Started',
-            description: `${file.filename} is being downloaded to your Downloads folder.`
-          })
+          ErrorHandler.handleSuccess(`${file.filename} is being downloaded to your Downloads folder.`)
         } else {
           throw new Error('File blob not found')
         }
       }
     } catch (error) {
       console.error('Download failed:', error)
-      notification.error({
-        message: 'Download Failed',
-        description: 'Failed to download the file. Please try again.'
-      })
+      ErrorHandler.handleAPIError(error, 'Failed to download the file. Please try again.')
     }
   }
 
@@ -565,16 +567,10 @@ const StreamingSlideGeneratorV2: React.FC = () => {
 
       setGeneratedFiles((prev) => prev.map((f) => (f.id === file.id ? updatedFile : f)))
 
-      notification.success({
-        message: 'Upload Complete',
-        description: `${file.filename} has been uploaded to the server.`
-      })
+      ErrorHandler.handleSuccess(`${file.filename} has been uploaded to the server.`)
     } catch (error) {
       console.error('Upload failed:', error)
-      notification.error({
-        message: 'Upload Failed',
-        description: 'Failed to upload the file to server. Please try again.'
-      })
+      ErrorHandler.handleAPIError(error, 'Failed to upload the file to server. Please try again.')
     } finally {
       setUploadingFiles((prev) => prev.filter((id) => id !== file.id))
     }
@@ -682,10 +678,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
 
   const saveSlides = () => {
     if (streamSlides.length === 0) {
-      notification.warning({
-        message: 'No Slides to Save',
-        description: 'Please generate some slides first before saving.'
-      })
+      ErrorHandler.handleWarning('Please generate some slides first before saving.')
       return
     }
 
@@ -854,10 +847,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
       console.log('Saved draft project:', projectDetail)
     } catch (error) {
       console.error('Error saving presentation:', error)
-      notification.error({
-        message: 'Save Failed',
-        description: 'Failed to save the presentation. Please try again.'
-      })
+      ErrorHandler.handleAPIError(error, 'Failed to save the presentation. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -883,7 +873,6 @@ const StreamingSlideGeneratorV2: React.FC = () => {
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
       <Tabs defaultActiveKey='generator' type='card'>
-        {' '}
         <TabPane tab='Slide Generator' key='generator'>
           <SlideGeneratorForm
             onGenerate={handleFormSubmit}
@@ -894,8 +883,22 @@ const StreamingSlideGeneratorV2: React.FC = () => {
             buttonText={projectId ? 'Project Created ✓' : 'Create Project'}
           />
         </TabPane>
-        {/* Add new tab for Reveal.js presentation */}
-        {/* Update the TabPane section in StreamingSlideGeneratorV2.tsx */}
+
+        <TabPane
+          tab={
+            <span>
+              <BgColorsOutlined /> Templates
+            </span>
+          }
+          key='templates'
+        >
+          <PresentationTemplates
+            selectedTemplate={selectedTemplate}
+            onTemplateSelect={handleTemplateSelect}
+            onPreview={handleTemplatePreview}
+          />
+        </TabPane>
+
         <TabPane tab={`Slide Preview (${streamSlides.length})`} key='reveal-presentation'>
           {streamSlides.length > 0 ? (
             <Card
@@ -908,6 +911,44 @@ const StreamingSlideGeneratorV2: React.FC = () => {
                   <Button icon={<SaveOutlined />} onClick={saveSlides} type='default'>
                     Save Presentation
                   </Button>
+
+                  {/* Export Dropdown */}
+                  <Dropdown
+                    menu={{
+                      items: [
+                        {
+                          key: 'json',
+                          label: 'Export as JSON',
+                          icon: <ExportOutlined />,
+                          onClick: () => handleExportPresentation('json')
+                        },
+                        {
+                          key: 'html',
+                          label: 'Export as HTML',
+                          icon: <ExportOutlined />,
+                          onClick: () => handleExportPresentation('html')
+                        },
+                        {
+                          key: 'pdf',
+                          label: 'Export as PDF',
+                          icon: <ExportOutlined />,
+                          onClick: () => handleExportPresentation('pdf')
+                        },
+                        {
+                          key: 'pptx',
+                          label: 'Export as PPTX',
+                          icon: <ExportOutlined />,
+                          onClick: () => handleExportPresentation('pptx')
+                        }
+                      ]
+                    }}
+                    trigger={['click']}
+                  >
+                    <Button icon={<ExportOutlined />}>
+                      Export <span style={{ fontSize: '10px' }}>▼</span>
+                    </Button>
+                  </Dropdown>
+
                   <Button type='dashed' icon={<ClearOutlined />} onClick={() => setStreamSlides([])}>
                     Clear
                   </Button>
@@ -927,7 +968,16 @@ const StreamingSlideGeneratorV2: React.FC = () => {
                         position: 'relative'
                       }}
                     >
-                      <RevealPresentation slides={streamSlides} height='600px' size='medium' />
+                      {selectedTemplate ? (
+                        <StyledRevealPresentation
+                          slides={streamSlides}
+                          template={selectedTemplate}
+                          height='600px'
+                          size='medium'
+                        />
+                      ) : (
+                        <RevealPresentation slides={streamSlides} height='600px' size='medium' />
+                      )}
                       <Button
                         style={{
                           position: 'absolute',
@@ -955,7 +1005,16 @@ const StreamingSlideGeneratorV2: React.FC = () => {
                       bodyStyle={{ height: '85vh', padding: 0 }}
                       destroyOnClose={false}
                     >
-                      <RevealPresentation slides={streamSlides} height='85vh' size='large' />
+                      {selectedTemplate ? (
+                        <StyledRevealPresentation
+                          slides={streamSlides}
+                          template={selectedTemplate}
+                          height='85vh'
+                          size='large'
+                        />
+                      ) : (
+                        <RevealPresentation slides={streamSlides} height='85vh' size='large' />
+                      )}
                     </Modal>
                   )}
                 </>
@@ -1391,7 +1450,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
             <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
               {streamSlides.length > 0 ? `Generated ${streamSlides.length} slides` : 'Generate AI slides'}
             </div>
-            {file && projectId && streamSlides.length === 0 && (
+            {projectId && streamSlides.length === 0 && (
               <Button
                 type='primary'
                 size='middle'
@@ -1490,6 +1549,13 @@ const StreamingSlideGeneratorV2: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+      {/* Template Preview Modal */}
+      <TemplatePreviewModal
+        visible={templatePreviewVisible}
+        onClose={() => setTemplatePreviewVisible(false)}
+        template={previewTemplate}
+        sampleSlides={getSampleSlides()}
+      />
     </div>
   )
 }
