@@ -8,14 +8,14 @@ import {
   SettingOutlined,
   UserOutlined
 } from '@ant-design/icons'
-import { Avatar, Button, Drawer, Dropdown, Layout, Menu, Space, Typography } from 'antd'
+import { Avatar, Button, Drawer, Dropdown, Layout, Menu, Space } from 'antd'
 import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import path from '../../constants/path'
 import { useAuth } from '../../hooks/useAuth'
+import NotificationDropdown from '../NotificationDropdown/NotificationDropdown'
 
 const { Header: AntHeader } = Layout
-const { Text } = Typography
 
 const Header: React.FC = () => {
   const navigate = useNavigate()
@@ -155,6 +155,7 @@ const Header: React.FC = () => {
             >
               New Project
             </Button>
+            <NotificationDropdown />
 
             {/* User Avatar and Dropdown */}
             <Dropdown
@@ -171,9 +172,9 @@ const Header: React.FC = () => {
                   icon={<UserOutlined />}
                   size='default'
                 />
-                <Text strong className='hidden-mobile'>
+                {/* <Text strong className='hidden-mobile'>
                   {user?.fullName}
-                </Text>
+                </Text> */}
               </Space>
             </Dropdown>
 
