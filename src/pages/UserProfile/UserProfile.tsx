@@ -1,38 +1,37 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
-  Card,
-  Button,
-  Tag,
-  Row,
-  Col,
-  Typography,
+  BookOutlined,
+  DownloadOutlined,
+  EyeOutlined,
+  FileImageOutlined,
+  FileTextOutlined,
+  PlayCircleOutlined,
+  ProjectOutlined,
+  UserOutlined,
+  VideoCameraOutlined
+} from '@ant-design/icons'
+import {
   Avatar,
-  Space,
+  Button,
+  Card,
+  Col,
   Empty,
-  Skeleton,
   Modal,
   notification,
-  Tabs,
+  Pagination,
+  Row,
+  Skeleton,
+  Space,
   Spin,
-  Pagination
+  Tabs,
+  Tag,
+  Typography
 } from 'antd'
-import {
-  UserOutlined,
-  ProjectOutlined,
-  EyeOutlined,
-  BookOutlined,
-  FileTextOutlined,
-  DownloadOutlined,
-  AudioFilled,
-  VideoCameraOutlined,
-  FileImageOutlined,
-  PlayCircleOutlined
-} from '@ant-design/icons'
-import { useAuth } from '../../hooks/useAuth'
-import { ProjectStatus } from '../../types/project.type'
-import { useProjectsOfUser } from '../../queries/useProjects'
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../../apis/api.config'
+import { useAuth } from '../../hooks/useAuth'
+import { useProjectsOfUser } from '../../queries/useProjects'
+import { ProjectStatus } from '../../types/project.type'
 
 // Add types for finalized lectures
 interface FinalizedLecture {
@@ -92,20 +91,45 @@ const UserProfile: React.FC = () => {
 
     setLoadingFinalized((prev) => ({ ...prev, [projectId]: true }))
     try {
-      const response = await api.get(`/projects/${projectId}/finalized-lectures`)
-      const lectures: FinalizedLecture[] = response.data
+      // First, get all lecture contents for this project
+      const lectureContentsResponse = await api.get(`/projects/${projectId}/lecture-contents`)
+      const lectureContents = lectureContentsResponse.data
+
+      if (!lectureContents || lectureContents.length === 0) {
+        setFinalizedLectures([])
+        notification.info({
+          message: 'No Content Found',
+          description: 'No lecture contents found for this project.'
+        })
+        return
+      }
+
+      // Then fetch finalized lectures for each lecture content
+      const allFinalizedLectures: FinalizedLecture[] = []
+
+      for (const content of lectureContents) {
+        try {
+          const finalizedResponse = await api.get(`/projects/lecture-contents/${content.id}/finalized-lectures`)
+          const finalizedLectures = finalizedResponse.data
+          allFinalizedLectures.push(...finalizedLectures)
+        } catch (error) {
+          console.warn(`Failed to fetch finalized lectures for content ${content.id}:`, error)
+          // Continue with other contents even if one fails
+        }
+      }
 
       setFinalizedLectures((prev) => {
         // Remove existing lectures for this project and add new ones
         const filtered = prev.filter(
-          (lecture) => !lectures.some((newLecture) => newLecture.lectureContentId === lecture.lectureContentId)
+          (lecture) =>
+            !allFinalizedLectures.some((newLecture) => newLecture.lectureContentId === lecture.lectureContentId)
         )
-        return [...filtered, ...lectures]
+        return [...filtered, ...allFinalizedLectures]
       })
 
       notification.success({
         message: 'Finalized Content Loaded',
-        description: `Found ${lectures.length} finalized lecture(s) for this project.`
+        description: `Found ${allFinalizedLectures.length} finalized lecture(s) for this project.`
       })
     } catch (error) {
       console.error('Failed to fetch finalized lectures:', error)
@@ -342,7 +366,7 @@ const UserProfile: React.FC = () => {
           <TabPane
             tab={
               <span>
-                <AudioFilled /> Audio
+                <VideoCameraOutlined /> Video
               </span>
             }
             key='1'
@@ -351,110 +375,185 @@ const UserProfile: React.FC = () => {
               <div style={{ textAlign: 'center', padding: '24px' }}>
                 <Spin size='large' />
                 <div style={{ marginTop: '16px' }}>
-                  <Text>Loading finalized content...</Text>
+                  <Text>Loading video content...</Text>
                 </div>
               </div>
             ) : (
               <div>
                 {finalizedLectures.length === 0 ? (
-                  <Empty description='No finalized content available yet' />
+                  <Empty description='No finalized video content available yet' image={Empty.PRESENTED_IMAGE_SIMPLE} />
                 ) : (
-                  finalizedLectures.map((lecture) => (
-                    <Card
-                      key={lecture.id}
-                      style={{ marginBottom: '16px' }}
-                      actions={[
-                        <Button
-                          type='primary'
-                          icon={<DownloadOutlined />}
-                          onClick={() => handleDownload(lecture.audioFileUrl, `audio_${lecture.lectureContentId}.mp3`)}
-                          disabled={!lecture.audioFileUrl || lecture.audioFileUrl === 'string'}
-                          key='download'
-                        >
-                          Download Audio
-                        </Button>
-                      ]}
-                    >
-                      <Meta
-                        avatar={<AudioFilled style={{ fontSize: '24px', color: '#1890ff' }} />}
-                        title={`Audio Content - ${lecture.lectureContentId}`}
-                        description={
-                          <Space direction='vertical' size='small' style={{ width: '100%' }}>
-                            <Text type='secondary'>
-                              Status:{' '}
-                              <Tag color={lecture.publishedStatus === 'PUBLISHED' ? 'green' : 'orange'}>
-                                {lecture.publishedStatus}
-                              </Tag>
-                            </Text>
-                            {lecture.audioFileUrl && lecture.audioFileUrl !== 'string' && (
-                              <Text type='secondary'>🎵 Audio file ready for download</Text>
-                            )}
-                          </Space>
-                        }
-                      />
-                    </Card>
-                  ))
-                )}
-              </div>
-            )}
-          </TabPane>
-
-          <TabPane
-            tab={
-              <span>
-                <VideoCameraOutlined /> Video
-              </span>
-            }
-            key='2'
-          >
-            {loadingFinalized[selectedProjectId || ''] ? (
-              <div style={{ textAlign: 'center', padding: '24px' }}>
-                <Spin size='large' />
-              </div>
-            ) : (
-              <div>
-                {finalizedLectures.length === 0 ? (
-                  <Empty description='No finalized content available yet' />
-                ) : (
-                  finalizedLectures.map((lecture) => (
-                    <Card
-                      key={lecture.id}
-                      style={{ marginBottom: '16px' }}
-                      actions={[
-                        <Button
-                          type='primary'
-                          icon={<DownloadOutlined />}
-                          onClick={() => handleDownload(lecture.videoFileUrl, `video_${lecture.lectureContentId}.mp4`)}
-                          disabled={!lecture.videoFileUrl || lecture.videoFileUrl === 'string'}
-                          key='download'
-                        >
-                          Download Video
-                        </Button>
-                      ]}
-                    >
-                      <Meta
-                        avatar={<VideoCameraOutlined style={{ fontSize: '24px', color: '#722ed1' }} />}
-                        title={`Video Content - ${lecture.lectureContentId}`}
-                        description={
-                          <Space direction='vertical' size='small' style={{ width: '100%' }}>
-                            <Text type='secondary'>
-                              Status:{' '}
-                              <Tag color={lecture.publishedStatus === 'PUBLISHED' ? 'green' : 'orange'}>
-                                {lecture.publishedStatus}
-                              </Tag>
-                            </Text>
-                            {lecture.videoFileUrl && lecture.videoFileUrl !== 'string' ? (
-                              <Text type='secondary'>🎬 Video file ready for download</Text>
+                  <Row gutter={[16, 16]}>
+                    {finalizedLectures.map((lecture) => (
+                      <Col xs={24} lg={12} key={lecture.id}>
+                        <Card
+                          style={{
+                            marginBottom: '16px',
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                          }}
+                          cover={
+                            lecture.videoFileUrl && lecture.videoFileUrl !== 'string' ? (
+                              <div style={{ position: 'relative', backgroundColor: '#000' }}>
+                                <video
+                                  controls
+                                  style={{
+                                    width: '100%',
+                                    height: '200px',
+                                    objectFit: 'cover'
+                                  }}
+                                  poster={lecture.thumbnailFileUrl !== 'string' ? lecture.thumbnailFileUrl : undefined}
+                                >
+                                  <source src={lecture.videoFileUrl} type='video/mp4' />
+                                  Your browser does not support the video tag.
+                                </video>
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    top: '8px',
+                                    right: '8px',
+                                    background: 'rgba(0,0,0,0.7)',
+                                    color: 'white',
+                                    padding: '4px 8px',
+                                    borderRadius: '4px',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  <VideoCameraOutlined /> Video Ready
+                                </div>
+                              </div>
                             ) : (
-                              <Text type='secondary' style={{ color: '#faad14' }}>
-                                📹 Video is being processed...
-                              </Text>
-                            )}
-                          </Space>
-                        }
-                      />
-                    </Card>
-                  ))
+                              <div
+                                style={{
+                                  height: '200px',
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexDirection: 'column',
+                                  color: 'white'
+                                }}
+                              >
+                                <VideoCameraOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
+                                <Text style={{ color: 'white', fontSize: '16px' }}>Video Processing...</Text>
+                                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: '12px' }}>
+                                  Your video is being generated
+                                </Text>
+                              </div>
+                            )
+                          }
+                          actions={[
+                            <Button
+                              type='primary'
+                              icon={<DownloadOutlined />}
+                              onClick={() =>
+                                handleDownload(lecture.videoFileUrl, `video_${lecture.lectureContentId}.mp4`)
+                              }
+                              disabled={!lecture.videoFileUrl || lecture.videoFileUrl === 'string'}
+                              key='download'
+                              style={{ borderRadius: '6px' }}
+                            >
+                              Download Video
+                            </Button>,
+                            lecture.videoFileUrl && lecture.videoFileUrl !== 'string' && (
+                              <Button
+                                type='default'
+                                icon={<EyeOutlined />}
+                                onClick={() => window.open(lecture.videoFileUrl, '_blank')}
+                                key='view'
+                                style={{ borderRadius: '6px' }}
+                              >
+                                View Full Screen
+                              </Button>
+                            )
+                          ].filter(Boolean)}
+                        >
+                          <Meta
+                            avatar={
+                              <div
+                                style={{
+                                  width: '48px',
+                                  height: '48px',
+                                  borderRadius: '50%',
+                                  background: 'linear-gradient(135deg, #722ed1, #9254de)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                <VideoCameraOutlined style={{ fontSize: '24px', color: 'white' }} />
+                              </div>
+                            }
+                            title={
+                              <div>
+                                <Text strong style={{ fontSize: '16px' }}>
+                                  Lecture Video
+                                </Text>
+                                <div style={{ marginTop: '4px' }}>
+                                  <Tag
+                                    color={lecture.publishedStatus === 'PUBLISHED' ? 'green' : 'orange'}
+                                    style={{ borderRadius: '12px' }}
+                                  >
+                                    {lecture.publishedStatus}
+                                  </Tag>
+                                </div>
+                              </div>
+                            }
+                            description={
+                              <Space direction='vertical' size='small' style={{ width: '100%' }}>
+                                <Text type='secondary' style={{ fontSize: '12px' }}>
+                                  Content ID: {lecture.lectureContentId}
+                                </Text>
+                                {lecture.videoFileUrl && lecture.videoFileUrl !== 'string' ? (
+                                  <div
+                                    style={{
+                                      padding: '8px 12px',
+                                      background: '#f6ffed',
+                                      border: '1px solid #b7eb8f',
+                                      borderRadius: '6px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px'
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        width: '8px',
+                                        height: '8px',
+                                        borderRadius: '50%',
+                                        background: '#52c41a'
+                                      }}
+                                    ></div>
+                                    <Text style={{ color: '#389e0d', fontSize: '12px', fontWeight: 500 }}>
+                                      🎬 Video ready for viewing and download
+                                    </Text>
+                                  </div>
+                                ) : (
+                                  <div
+                                    style={{
+                                      padding: '8px 12px',
+                                      background: '#fffbe6',
+                                      border: '1px solid #ffe58f',
+                                      borderRadius: '6px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px'
+                                    }}
+                                  >
+                                    <Spin size='small' />
+                                    <Text style={{ color: '#d48806', fontSize: '12px', fontWeight: 500 }}>
+                                      📹 Video is being processed...
+                                    </Text>
+                                  </div>
+                                )}
+                              </Space>
+                            }
+                          />
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
                 )}
               </div>
             )}
@@ -466,68 +565,190 @@ const UserProfile: React.FC = () => {
                 <FileImageOutlined /> Presentation
               </span>
             }
-            key='3'
+            key='2'
           >
             {loadingFinalized[selectedProjectId || ''] ? (
               <div style={{ textAlign: 'center', padding: '24px' }}>
                 <Spin size='large' />
+                <div style={{ marginTop: '16px' }}>
+                  <Text>Loading presentation content...</Text>
+                </div>
               </div>
             ) : (
               <div>
                 {finalizedLectures.length === 0 ? (
-                  <Empty description='No finalized content available yet' />
+                  <Empty
+                    description='No finalized presentation content available yet'
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  />
                 ) : (
-                  finalizedLectures.map((lecture) => (
-                    <Card
-                      key={lecture.id}
-                      style={{ marginBottom: '16px' }}
-                      actions={[
-                        <Button
-                          type='primary'
-                          icon={<DownloadOutlined />}
-                          onClick={() =>
-                            handleDownload(lecture.presentationFileUrl, `slides_${lecture.lectureContentId}.pptx`)
-                          }
-                          disabled={!lecture.presentationFileUrl || lecture.presentationFileUrl === 'string'}
-                          key='download'
-                        >
-                          Download Slides
-                        </Button>
-                      ]}
-                    >
-                      <Meta
-                        avatar={<FileImageOutlined style={{ fontSize: '24px', color: '#52c41a' }} />}
-                        title={`Presentation - ${lecture.lectureContentId}`}
-                        description={
-                          <Space direction='vertical' size='small' style={{ width: '100%' }}>
-                            <Text type='secondary'>
-                              Status:{' '}
-                              <Tag color={lecture.publishedStatus === 'PUBLISHED' ? 'green' : 'orange'}>
-                                {lecture.publishedStatus}
-                              </Tag>
-                            </Text>
-                            {lecture.presentationFileUrl && lecture.presentationFileUrl !== 'string' && (
-                              <Text type='secondary'>📊 Presentation slides ready for download</Text>
-                            )}
-                            {lecture.thumbnailFileUrl && lecture.thumbnailFileUrl !== 'string' && (
-                              <div style={{ marginTop: '8px' }}>
-                                <img
-                                  src={lecture.thumbnailFileUrl}
-                                  alt='Presentation thumbnail'
+                  <Row gutter={[16, 16]}>
+                    {finalizedLectures.map((lecture) => (
+                      <Col xs={24} lg={12} key={lecture.id}>
+                        <Card
+                          style={{
+                            marginBottom: '16px',
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                          }}
+                          cover={
+                            <div
+                              style={{
+                                height: '160px',
+                                background: 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexDirection: 'column',
+                                color: 'white',
+                                position: 'relative'
+                              }}
+                            >
+                              <FileImageOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
+                              <Text style={{ color: 'white', fontSize: '16px', fontWeight: 500 }}>
+                                PowerPoint Presentation
+                              </Text>
+                              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: '12px' }}>
+                                Ready for download
+                              </Text>
+                              {lecture.thumbnailFileUrl && lecture.thumbnailFileUrl !== 'string' && (
+                                <div
                                   style={{
-                                    maxWidth: '100px',
-                                    maxHeight: '60px',
+                                    position: 'absolute',
+                                    bottom: '8px',
+                                    right: '8px',
+                                    width: '60px',
+                                    height: '40px',
                                     borderRadius: '4px',
-                                    border: '1px solid #d9d9d9'
+                                    overflow: 'hidden',
+                                    border: '2px solid white'
                                   }}
-                                />
+                                >
+                                  <img
+                                    src={lecture.thumbnailFileUrl}
+                                    alt='Presentation thumbnail'
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover'
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          }
+                          actions={[
+                            <Button
+                              type='primary'
+                              icon={<DownloadOutlined />}
+                              onClick={() =>
+                                handleDownload(lecture.presentationFileUrl, `slides_${lecture.lectureContentId}.pptx`)
+                              }
+                              disabled={!lecture.presentationFileUrl || lecture.presentationFileUrl === 'string'}
+                              key='download'
+                              style={{ borderRadius: '6px' }}
+                            >
+                              Download Slides
+                            </Button>,
+                            lecture.presentationFileUrl && lecture.presentationFileUrl !== 'string' && (
+                              <Button
+                                type='default'
+                                icon={<EyeOutlined />}
+                                onClick={() => window.open(lecture.presentationFileUrl, '_blank')}
+                                key='view'
+                                style={{ borderRadius: '6px' }}
+                              >
+                                View Online
+                              </Button>
+                            )
+                          ].filter(Boolean)}
+                        >
+                          <Meta
+                            avatar={
+                              <div
+                                style={{
+                                  width: '48px',
+                                  height: '48px',
+                                  borderRadius: '50%',
+                                  background: 'linear-gradient(135deg, #52c41a, #389e0d)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                <FileImageOutlined style={{ fontSize: '24px', color: 'white' }} />
                               </div>
-                            )}
-                          </Space>
-                        }
-                      />
-                    </Card>
-                  ))
+                            }
+                            title={
+                              <div>
+                                <Text strong style={{ fontSize: '16px' }}>
+                                  Lecture Slides
+                                </Text>
+                                <div style={{ marginTop: '4px' }}>
+                                  <Tag
+                                    color={lecture.publishedStatus === 'PUBLISHED' ? 'green' : 'orange'}
+                                    style={{ borderRadius: '12px' }}
+                                  >
+                                    {lecture.publishedStatus}
+                                  </Tag>
+                                </div>
+                              </div>
+                            }
+                            description={
+                              <Space direction='vertical' size='small' style={{ width: '100%' }}>
+                                <Text type='secondary' style={{ fontSize: '12px' }}>
+                                  Content ID: {lecture.lectureContentId}
+                                </Text>
+                                {lecture.presentationFileUrl && lecture.presentationFileUrl !== 'string' ? (
+                                  <div
+                                    style={{
+                                      padding: '8px 12px',
+                                      background: '#f6ffed',
+                                      border: '1px solid #b7eb8f',
+                                      borderRadius: '6px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px'
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        width: '8px',
+                                        height: '8px',
+                                        borderRadius: '50%',
+                                        background: '#52c41a'
+                                      }}
+                                    ></div>
+                                    <Text style={{ color: '#389e0d', fontSize: '12px', fontWeight: 500 }}>
+                                      📊 Presentation slides ready for download
+                                    </Text>
+                                  </div>
+                                ) : (
+                                  <div
+                                    style={{
+                                      padding: '8px 12px',
+                                      background: '#fffbe6',
+                                      border: '1px solid #ffe58f',
+                                      borderRadius: '6px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px'
+                                    }}
+                                  >
+                                    <Spin size='small' />
+                                    <Text style={{ color: '#d48806', fontSize: '12px', fontWeight: 500 }}>
+                                      📄 Presentation is being processed...
+                                    </Text>
+                                  </div>
+                                )}
+                              </Space>
+                            }
+                          />
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
                 )}
               </div>
             )}

@@ -121,22 +121,13 @@ export default function Home() {
           Join thousands of educators and professionals using GenEdu.
         </Paragraph>
         <Space>
-          {!isAuthenticated ? (
+          {!isAuthenticated && (
             <>
               <Button size='large' style={{ marginRight: '16px' }} onClick={() => navigate('/register')}>
                 Get Started Free
               </Button>
               <Button size='large' type='default' ghost onClick={() => navigate('/login')}>
                 Sign In
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button size='large' style={{ marginRight: '16px' }} onClick={() => navigate('/profile')}>
-                My Projects
-              </Button>
-              <Button size='large' type='default' ghost onClick={() => navigate('/presentation')}>
-                Create Presentation
               </Button>
             </>
           )}

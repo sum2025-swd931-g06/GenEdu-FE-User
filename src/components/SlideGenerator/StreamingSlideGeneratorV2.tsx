@@ -250,7 +250,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
     formData.append('mediaFile', file.mediaFile)
 
     try {
-      const response = await api.put(`/projects/lesson-plan`, formData, {
+      const response = await api.post(`/projects/lesson-plans`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         },
@@ -561,13 +561,115 @@ const StreamingSlideGeneratorV2: React.FC = () => {
   const uploadFileToServer = async (file: GeneratedFile) => {
     if (uploadingFiles.includes(file.id)) return
 
+    if (!projectId) {
+      ErrorHandler.handleAPIError(new Error('Missing Project ID'), 'Project ID is required to upload presentation.')
+      return
+    }
+
+    if (streamSlides.length === 0) {
+      ErrorHandler.handleAPIError(new Error('No Slides'), 'Please generate slides first before uploading presentation.')
+      return
+    }
+
     setUploadingFiles((prev) => [...prev, file.id])
+
     try {
-      const updatedFile = await FileService.uploadFileToServer(file, 'https://api.example.com/upload')
+      const token = getAuthToken()
+      if (!token) {
+        throw new Error('Authentication token is required')
+      }
+
+      // Step 1: Create lecture content to get lectureContentId
+      ErrorHandler.handleInfo('Creating lecture content...')
+      const topic = generationParams?.topic || initialTopic || 'Generated Slides'
+      const lectureContentResponse = await saveToServer(`${topic} - Presentation`, streamSlides)
+
+      const lectureContentId = lectureContentResponse.id
+      ErrorHandler.handleSuccess('Lecture content created successfully!')
+
+      // Step 2: Regenerate PowerPoint file to ensure we have a valid blob
+      ErrorHandler.handleInfo('Preparing presentation file...')
+      
+      // Import PowerPointGenerator and regenerate the file
+      const { PowerPointGenerator } = await import('../../utils/powerpointGenerator')
+      const options = {
+        title: file.filename.replace('.pptx', ''),
+        subtitle: `Generated on ${new Date().toLocaleDateString()}`,
+        author: 'GenEdu AI',
+        company: 'GenEdu Platform'
+      }
+      
+      const generator = new PowerPointGenerator(options)
+      generator.generateFromSlides(streamSlides)
+      const blob = await generator.saveToBlob()
+
+      // Step 3: Upload presentation file with required properties
+      ErrorHandler.handleInfo('Uploading presentation file...')
+
+      // Create FormData with required properties
+      const formData = new FormData()
+      formData.append('projectId', projectId)
+      formData.append('lectureContentId', lectureContentId)
+      formData.append('mediaFile', blob, file.filename)
+
+      // Upload the presentation file
+      const uploadResponse = await fetch(
+        'https://genedu-gateway.lch.id.vn/api/v1/projects/lecture-content/presentations',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`
+            // Don't set Content-Type header - let browser set it with boundary for FormData
+          },
+          body: formData
+        }
+      )
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text()
+        throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`)
+      }
+
+      const uploadResult = await uploadResponse.json()
+      console.log('Upload successful:', uploadResult)
+
+      // Step 4: Finalize the lecture using the presentation ID
+      const presentationId = uploadResult.id
+      if (presentationId) {
+        ErrorHandler.handleInfo('Finalizing lecture...')
+        
+        const finalizeResponse = await fetch(
+          `https://genedu-gateway.lch.id.vn/api/v1/projects/finalized-lectures/${presentationId}/lecture-videos`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        )
+
+        if (finalizeResponse.ok) {
+          ErrorHandler.handleSuccess('Lecture finalized successfully!')
+        } else {
+          console.warn('Failed to finalize lecture:', finalizeResponse.status)
+          ErrorHandler.handleWarning('Presentation uploaded but failed to finalize lecture. You may need to finalize it manually.')
+        }
+      }
+
+      // Update the file with server information
+      const updatedFile: GeneratedFile = {
+        ...file,
+        serverUrl: uploadResult.presentationFileUrl || uploadResult.url || uploadResult.fileUrl,
+        uploadedAt: new Date().toISOString(),
+        lectureContentId: lectureContentId,
+        projectId: projectId,
+        uploadStatus: 'uploaded',
+        presentationId: presentationId
+      }
 
       setGeneratedFiles((prev) => prev.map((f) => (f.id === file.id ? updatedFile : f)))
 
-      ErrorHandler.handleSuccess(`${file.filename} has been uploaded to the server.`)
+      ErrorHandler.handleSuccess(`${file.filename} has been uploaded and lecture finalized successfully!`)
     } catch (error) {
       console.error('Upload failed:', error)
       ErrorHandler.handleAPIError(error, 'Failed to upload the file to server. Please try again.')
@@ -651,7 +753,7 @@ const StreamingSlideGeneratorV2: React.FC = () => {
     console.log('Saving to server:', requestBody)
 
     try {
-      const response = await fetch('https://genedu-gateway.lch.id.vn/api/v1/projects/lecture-content', {
+      const response = await fetch('https://genedu-gateway.lch.id.vn/api/v1/projects/lecture-contents', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

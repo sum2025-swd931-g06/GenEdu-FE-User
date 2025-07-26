@@ -11,6 +11,10 @@ export interface GeneratedFile {
   localPath?: string
   uploadStatus: 'pending' | 'uploading' | 'uploaded' | 'failed'
   uploadUrl?: string
+  serverUrl?: string
+  uploadedAt?: string
+  lectureContentId?: string
+  presentationId?: string
 }
 
 export class FileService {
