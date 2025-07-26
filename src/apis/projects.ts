@@ -1,5 +1,5 @@
 import { UserData } from '../types/auth.type'
-import { Project, ProjectDetail, ProjectResponseDTO } from '../types/project.type'
+import { Project, ProjectDetail, ProjectResponseDTO, PaginatedResponse, PaginationParams } from '../types/project.type'
 import api from './api.config'
 
 // User API
@@ -10,7 +10,24 @@ export const userAPI = {
 }
 // Project API
 export const projectAPI = {
-  getAllProjectOfUser: (): Promise<ProjectResponseDTO[]> => api.get(`/projects/my-projects`).then((res) => res.data),
+  getAllProjectOfUser: (params?: PaginationParams): Promise<PaginatedResponse<ProjectResponseDTO>> => {
+    const searchParams = new URLSearchParams()
+    
+    if (params?.page !== undefined) {
+      searchParams.append('page', params.page.toString())
+    }
+    if (params?.size !== undefined) {
+      searchParams.append('size', params.size.toString())
+    }
+    if (params?.sort) {
+      searchParams.append('sort', params.sort)
+    }
+    
+    const queryString = searchParams.toString()
+    const url = queryString ? `/projects?${queryString}` : '/projects'
+    
+    return api.get(url).then((res) => res.data)
+  },
 
   getById: (id: string): Promise<ProjectDetail> => api.get(`/projects/${id}`).then((res) => res.data),
 

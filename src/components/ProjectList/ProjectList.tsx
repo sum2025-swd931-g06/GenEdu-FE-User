@@ -1,5 +1,5 @@
-import React from 'react'
-import { Card, Tag, Typography, Space, Skeleton, Alert, Empty } from 'antd'
+import React, { useState } from 'react'
+import { Card, Tag, Typography, Space, Skeleton, Alert, Empty, Pagination } from 'antd'
 import { ProjectOutlined, BookOutlined, FileTextOutlined } from '@ant-design/icons'
 import { useProjectsOfUser } from '../../queries/useProjects'
 import { ProjectStatus } from '../../types/project.type'
@@ -7,7 +7,27 @@ import { ProjectStatus } from '../../types/project.type'
 const { Title, Text } = Typography
 
 const ProjectList: React.FC = () => {
-  const { data: projects = [], isLoading, error } = useProjectsOfUser()
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  
+  // Fetch projects with pagination
+  const { data: projectsResponse, isLoading, error } = useProjectsOfUser({
+    page: currentPage - 1, // API uses 0-based indexing
+    size: pageSize,
+    sort: 'id'
+  })
+
+  const projects = projectsResponse?.content || []
+  const totalElements = projectsResponse?.totalElements || 0
+
+  // Handle pagination change
+  const handlePageChange = (page: number, size?: number) => {
+    setCurrentPage(page)
+    if (size && size !== pageSize) {
+      setPageSize(size)
+    }
+  }
 
   const getStatusColor = (status: ProjectStatus): string => {
     switch (status) {
@@ -45,7 +65,7 @@ const ProjectList: React.FC = () => {
     )
   }
 
-  if (projects.length === 0) {
+  if (projects.length === 0 && totalElements === 0) {
     return (
       <Card title='My Projects'>
         <Empty description='No projects found' />
@@ -58,7 +78,7 @@ const ProjectList: React.FC = () => {
       title={
         <Space>
           <ProjectOutlined />
-          <span>My Projects ({projects.length})</span>
+          <span>My Projects ({totalElements} total)</span>
         </Space>
       }
     >
@@ -108,11 +128,28 @@ const ProjectList: React.FC = () => {
         ))}
       </Space>
 
+      {/* Pagination */}
+      {totalElements > 0 && (
+        <div style={{ marginTop: '16px', textAlign: 'center' }}>
+          <Pagination
+            current={currentPage}
+            total={totalElements}
+            pageSize={pageSize}
+            showSizeChanger
+            showQuickJumper
+            showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} projects`}
+            onChange={handlePageChange}
+            onShowSizeChange={handlePageChange}
+            pageSizeOptions={['5', '10', '20', '50']}
+          />
+        </div>
+      )}
+
       {/* Summary Statistics */}
       <Card size='small' style={{ marginTop: '16px', backgroundColor: '#fafafa' }} title='Summary'>
         <Space>
           <Text>
-            <strong>Total:</strong> {projects.length}
+            <strong>Total:</strong> {totalElements}
           </Text>
           <Text>
             <strong>Completed:</strong> {projects.filter((p) => p.status === 'COMPLETED').length}

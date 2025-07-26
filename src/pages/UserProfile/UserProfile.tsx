@@ -14,7 +14,8 @@ import {
   Modal,
   notification,
   Tabs,
-  Spin
+  Spin,
+  Pagination
 } from 'antd'
 import {
   UserOutlined,
@@ -51,13 +52,39 @@ const { TabPane } = Tabs
 const UserProfile: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { data: projects = [], isLoading, error } = useProjectsOfUser()
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(6)
+
+  // Fetch projects with pagination
+  const {
+    data: projectsResponse,
+    isLoading,
+    error
+  } = useProjectsOfUser({
+    page: currentPage - 1, // API uses 0-based indexing
+    size: pageSize,
+    sort: 'id'
+  })
+
+  const projects = projectsResponse?.content || []
+  const totalElements = projectsResponse?.totalElements || 0
+  //const totalPages = projectsResponse?.totalPages || 0
 
   // State for finalized lectures
   const [finalizedLectures, setFinalizedLectures] = useState<FinalizedLecture[]>([])
   const [loadingFinalized, setLoadingFinalized] = useState<Record<string, boolean>>({})
   const [finalizedModalVisible, setFinalizedModalVisible] = useState(false)
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+
+  // Handle pagination change
+  const handlePageChange = (page: number, size?: number) => {
+    setCurrentPage(page)
+    if (size && size !== pageSize) {
+      setPageSize(size)
+    }
+  }
 
   // Fetch finalized lectures for a project
   const fetchFinalizedLectures = async (projectId: string) => {
@@ -163,6 +190,7 @@ const UserProfile: React.FC = () => {
           <Space>
             <ProjectOutlined />
             <span>My Projects</span>
+            <Text type='secondary'>({totalElements} total)</Text>
           </Space>
         }
         style={{ marginBottom: '24px' }}
@@ -177,66 +205,90 @@ const UserProfile: React.FC = () => {
         ) : projects.length === 0 ? (
           <Empty description='No projects found' />
         ) : (
-          <Row gutter={[16, 16]}>
-            {projects.map((project) => (
-              <Col xs={24} sm={12} lg={8} key={project.id}>
-                <Card
-                  hoverable
-                  actions={[
-                    <Button type='link' icon={<EyeOutlined />} onClick={() => handleViewProject(project.id)} key='view'>
-                      View
-                    </Button>,
-                    // <Button
-                    //   type='link'
-                    //   icon={<FileTextOutlined />}
-                    //   onClick={() => handleEditProject(project.id)}
-                    //   key='edit'
-                    // >
-                    //   Edit
-                    // </Button>,
-                    <Button
-                      type='link'
-                      icon={<PlayCircleOutlined />}
-                      onClick={() => viewFinalizedContent(project.id)}
-                      loading={loadingFinalized[project.id]}
-                      key='finalized'
-                    >
-                      Finalized
-                    </Button>
-                  ]}
-                >
-                  <Meta
-                    title={
-                      <div>
-                        <Text strong>{project.title}</Text>
-                        <div style={{ marginTop: '8px' }}>
-                          <Tag color={getStatusColor(project.status)}>{project.status}</Tag>
+          <>
+            <Row gutter={[16, 16]}>
+              {projects.map((project) => (
+                <Col xs={24} sm={12} lg={8} key={project.id}>
+                  <Card
+                    hoverable
+                    actions={[
+                      <Button
+                        type='link'
+                        icon={<EyeOutlined />}
+                        onClick={() => handleViewProject(project.id)}
+                        key='view'
+                      >
+                        View
+                      </Button>,
+                      // <Button
+                      //   type='link'
+                      //   icon={<FileTextOutlined />}
+                      //   onClick={() => handleEditProject(project.id)}
+                      //   key='edit'
+                      // >
+                      //   Edit
+                      // </Button>,
+                      <Button
+                        type='link'
+                        icon={<PlayCircleOutlined />}
+                        onClick={() => viewFinalizedContent(project.id)}
+                        loading={loadingFinalized[project.id]}
+                        key='finalized'
+                      >
+                        Finalized
+                      </Button>
+                    ]}
+                  >
+                    <Meta
+                      title={
+                        <div>
+                          <Text strong>{project.title}</Text>
+                          <div style={{ marginTop: '8px' }}>
+                            <Tag color={getStatusColor(project.status)}>{project.status}</Tag>
+                          </div>
                         </div>
-                      </div>
-                    }
-                    description={
-                      <Space direction='vertical' size='small' style={{ width: '100%' }}>
-                        <Text type='secondary'>
-                          <BookOutlined /> Lesson ID: {project.lessonId}
-                        </Text>
-                        {project.slideNum && (
+                      }
+                      description={
+                        <Space direction='vertical' size='small' style={{ width: '100%' }}>
                           <Text type='secondary'>
-                            <FileTextOutlined /> {project.slideNum} slides
+                            <BookOutlined /> Lesson ID: {project.lessonId}
                           </Text>
-                        )}
-                        {project.customInstructions && (
-                          <Text type='secondary' ellipsis={{ tooltip: project.customInstructions }}>
-                            Instructions: {project.customInstructions}
-                          </Text>
-                        )}
-                        {project.templateId && <Text type='secondary'>Template: {project.templateId}</Text>}
-                      </Space>
-                    }
-                  />
-                </Card>
-              </Col>
-            ))}
-          </Row>
+                          {project.slideNum && (
+                            <Text type='secondary'>
+                              <FileTextOutlined /> {project.slideNum} slides
+                            </Text>
+                          )}
+                          {project.customInstructions && (
+                            <Text type='secondary' ellipsis={{ tooltip: project.customInstructions }}>
+                              Instructions: {project.customInstructions}
+                            </Text>
+                          )}
+                          {project.templateId && <Text type='secondary'>Template: {project.templateId}</Text>}
+                        </Space>
+                      }
+                    />
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+
+            {/* Pagination */}
+            {totalElements > 0 && (
+              <div style={{ marginTop: '24px', textAlign: 'center' }}>
+                <Pagination
+                  current={currentPage}
+                  total={totalElements}
+                  pageSize={pageSize}
+                  showSizeChanger
+                  showQuickJumper
+                  showTotal={(total, range) => `${range[0]}-${range[1]} of ${total} projects`}
+                  onChange={handlePageChange}
+                  onShowSizeChange={handlePageChange}
+                  pageSizeOptions={['6', '12', '24', '48']}
+                />
+              </div>
+            )}
+          </>
         )}
       </Card>
 
@@ -246,7 +298,7 @@ const UserProfile: React.FC = () => {
           <Col xs={12} sm={6}>
             <div style={{ textAlign: 'center' }}>
               <Title level={3} style={{ margin: 0, color: '#1890ff' }}>
-                {projects.length}
+                {totalElements}
               </Title>
               <Text type='secondary'>Total Projects</Text>
             </div>
